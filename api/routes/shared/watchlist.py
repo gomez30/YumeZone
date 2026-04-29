@@ -1,9 +1,18 @@
 from flask import Blueprint, render_template, session, redirect, flash
 import logging
 from ...models.user import get_user_by_id
+from ...core.config import Config
 
 watchlist_bp = Blueprint('watchlist', __name__)
 logger = logging.getLogger(__name__)
+
+
+@watchlist_bp.before_request
+def _guard_watchlist_feature():
+    if not Config.ENABLE_WATCHLIST:
+        flash('Watchlist is disabled on this deployment.', 'info')
+        return redirect('/home')
+
 
 @watchlist_bp.route('/', methods=['GET'])
 def watchlist():

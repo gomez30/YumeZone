@@ -8,11 +8,21 @@ import time as _time
 import requests
 
 from ...models.user import get_user_by_id
+from ...core.config import Config
 
 watchlist_api_bp = Blueprint('watchlist_api', __name__)
 logger = logging.getLogger(__name__)
 
 ANILIST_GRAPHQL = "https://graphql.anilist.co"
+
+
+@watchlist_api_bp.before_request
+def _guard_watchlist_api_feature():
+    if not Config.ENABLE_WATCHLIST or not Config.ENABLE_ANILIST:
+        return jsonify({
+            "success": False,
+            "message": "Watchlist syncing is disabled on this deployment."
+        }), 503
 
 
 # ── MAL sync helper ─────────────────────────────────────────────

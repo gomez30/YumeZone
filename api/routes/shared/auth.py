@@ -18,6 +18,21 @@ auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
 
 
+@auth_bp.before_request
+def _guard_optional_auth_features():
+    if not Config.ENABLE_AUTH:
+        flash('Account features are disabled on this deployment.', 'info')
+        return redirect(url_for('home_routes.home'))
+
+    path = request.path or ""
+    if "/mal/" in path and not Config.ENABLE_MAL:
+        flash('MyAnimeList integration is disabled on this deployment.', 'info')
+        return redirect(url_for('catalog_routes.settings'))
+    if "/anilist/" in path and not Config.ENABLE_ANILIST:
+        flash('AniList integration is disabled on this deployment.', 'info')
+        return redirect(url_for('catalog_routes.settings'))
+
+
 
 
 

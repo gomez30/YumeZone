@@ -170,8 +170,9 @@ async function handleLogin(e) {
     const btnText = document.getElementById('login-btn-text');
     const errorDiv = document.getElementById('login-error');
 
+    const turnstileWidget = form.querySelector('.cf-turnstile');
     const turnstileToken = form.querySelector('[name="cf-turnstile-response"]')?.value;
-    if (!turnstileToken) {
+    if (turnstileWidget && !turnstileToken) {
         errorDiv.textContent = 'Please complete the security check.';
         errorDiv.style.display = 'block';
         return;
@@ -188,7 +189,7 @@ async function handleLogin(e) {
             body: JSON.stringify({
                 username: form.username.value,
                 password: form.password.value,
-                cf_turnstile_response: turnstileToken
+                cf_turnstile_response: turnstileToken || null
             })
         });
 
@@ -199,9 +200,8 @@ async function handleLogin(e) {
         } else {
             errorDiv.textContent = data.message || 'Login failed';
             errorDiv.style.display = 'block';
-            if (window.turnstile) {
-                const widget = form.querySelector('.cf-turnstile');
-                if (widget) turnstile.reset(widget);
+            if (window.turnstile && turnstileWidget) {
+                turnstile.reset(turnstileWidget);
             }
         }
     } catch (err) {
@@ -220,8 +220,9 @@ async function handleSignup(e) {
     const btnText = document.getElementById('signup-btn-text');
     const errorDiv = document.getElementById('signup-error');
 
+    const turnstileWidget = form.querySelector('.cf-turnstile');
     const turnstileToken = form.querySelector('[name="cf-turnstile-response"]')?.value;
-    if (!turnstileToken) {
+    if (turnstileWidget && !turnstileToken) {
         errorDiv.textContent = 'Please complete the security check.';
         errorDiv.style.display = 'block';
         return;
@@ -239,7 +240,7 @@ async function handleSignup(e) {
                 username: form.username.value,
                 email: form.email.value,
                 password: form.password.value,
-                cf_turnstile_response: turnstileToken
+                cf_turnstile_response: turnstileToken || null
             })
         });
 
@@ -250,9 +251,8 @@ async function handleSignup(e) {
         } else {
             errorDiv.textContent = data.message || 'Signup failed';
             errorDiv.style.display = 'block';
-            if (window.turnstile) {
-                const widget = form.querySelector('.cf-turnstile');
-                if (widget) turnstile.reset(widget);
+            if (window.turnstile && turnstileWidget) {
+                turnstile.reset(turnstileWidget);
             }
         }
     } catch (err) {

@@ -25,6 +25,15 @@ auth_api_bp = Blueprint('auth_api', __name__)
 logger = logging.getLogger(__name__)
 
 
+@auth_api_bp.before_request
+def _require_auth_feature():
+    if not Config.ENABLE_AUTH:
+        return jsonify({
+            'success': False,
+            'message': 'Authentication is disabled on this deployment.'
+        }), 503
+
+
 @auth_api_bp.route('/signup', methods=['POST'])
 @limiter.limit("3 per minute")
 def signup():
@@ -35,7 +44,7 @@ def signup():
     password = data.get('password', '')
     turnstile_token = data.get('cf_turnstile_response')
     
-    if not verify_turnstile(turnstile_token, Config.CLOUDFLARE_SECRET, request.remote_addr):
+    if Config.ENABLE_TURNSTILE and not verify_turnstile(turnstile_token, Config.CLOUDFLARE_SECRET, request.remote_addr):
         return jsonify({'success': False, 'message': 'Please verify you are not a robot.'}), 403
 
     # Validation
@@ -96,7 +105,7 @@ def login():
 
     current_app.logger.info(f"Login attempt for user '{username}' from IP: {client_ip}")
 
-    if not verify_turnstile(turnstile_token, Config.CLOUDFLARE_SECRET, client_ip):
+    if Config.ENABLE_TURNSTILE and not verify_turnstile(turnstile_token, Config.CLOUDFLARE_SECRET, client_ip):
         current_app.logger.warning(f"Failed captcha for user '{username}' from IP: {client_ip}")
         return jsonify({'success': False, 'message': 'Please verify you are not a robot.'}), 403
 
@@ -239,6 +248,8 @@ def change_password_route():
 @limiter.limit("3 per minute")
 def forgot_password():
     """Send a 6-digit reset code to the user's email."""
+    if not Config.ENABLE_EMAIL_RESET:
+        return jsonify({'success': False, 'message': 'Password reset is disabled on this deployment.'}), 503
     data = request.get_json()
     email = (data.get('email') or '').strip().lower()
 
@@ -273,6 +284,8 @@ def forgot_password():
 @limiter.limit("5 per minute")
 def verify_reset_code_endpoint():
     """Verify the 6-digit reset code."""
+    if not Config.ENABLE_EMAIL_RESET:
+        return jsonify({'success': False, 'message': 'Password reset is disabled on this deployment.'}), 503
     data = request.get_json()
     email = (data.get('email') or '').strip().lower()
     code = (data.get('code') or '').strip()
@@ -298,6 +311,8 @@ def verify_reset_code_endpoint():
 @limiter.limit("3 per minute")
 def reset_password_endpoint():
     """Set a new password after code verification."""
+    if not Config.ENABLE_EMAIL_RESET:
+        return jsonify({'success': False, 'message': 'Password reset is disabled on this deployment.'}), 503
     data = request.get_json()
     email = (data.get('email') or '').strip().lower()
     code = (data.get('code') or '').strip()

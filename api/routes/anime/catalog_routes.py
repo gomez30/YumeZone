@@ -7,6 +7,7 @@ from markupsafe import escape
 
 from ...models.user import get_user_by_id
 from ...core.caching import cache_result, USER_DATA_CACHE_DURATION
+from ...core.config import Config
 
 catalog_routes_bp = Blueprint('catalog_routes', __name__)
 
@@ -127,6 +128,9 @@ def category(category_name):
 @catalog_routes_bp.route('/profile', methods=['GET'])
 def profile():
     """Redirect to new combined watchlist/profile page"""
+    if not Config.ENABLE_AUTH or not Config.ENABLE_WATCHLIST:
+        flash('Profile is disabled on this deployment.', 'info')
+        return redirect('/home')
     if 'username' not in session:
         flash('Please log in to view your profile.', 'warning')
         return redirect('/home')
@@ -136,6 +140,10 @@ def profile():
 @catalog_routes_bp.route('/settings', methods=['GET'])
 def settings():
     """Display user settings page"""
+    if not Config.ENABLE_AUTH:
+        flash('Settings are disabled on this deployment.', 'info')
+        return redirect('/home')
+
     username = session.get('username')
     user_id = session.get('_id')
     
