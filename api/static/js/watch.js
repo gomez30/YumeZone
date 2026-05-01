@@ -35,6 +35,245 @@
     };
 })();
 
+const MEGAPLAY_PROVIDER = 'megaplay';
+const MEGAPLAY_ORIGIN = 'https://megaplay.buzz';
+const MEGAPLAY_BASE_URL = `${MEGAPLAY_ORIGIN}/stream/ani`;
+let _megaPlayProgressMarked = false;
+let _megaPlayLastEmbedUrl = '';
+
+function isNumericId(value) {
+    if (value === null || value === undefined) return false;
+    return /^\d+$/.test(String(value).trim());
+}
+
+function getMegaPlayAniListId() {
+    const cfgId = window.WATCH_CONFIG?.anilistId;
+    if (isNumericId(cfgId)) return String(cfgId).trim();
+
+    // Fallback for routes where animeId is already the numeric AniList ID.
+    const animeId = window.WATCH_CONFIG?.animeId;
+    if (isNumericId(animeId)) return String(animeId).trim();
+
+    return null;
+}
+
+function canUseMegaPlay() {
+    return Boolean(getMegaPlayAniListId());
+}
+
+function isMegaPlayActive() {
+    return window._watchState?.provider === MEGAPLAY_PROVIDER;
+}
+
+function buildMegaPlayUrl() {
+    const anilistId = getMegaPlayAniListId();
+    const state = window._watchState || {};
+    const ep = state.episodeNumber || window.WATCH_CONFIG?.episodeNumber || 1;
+    const lang = (state.language === 'dub') ? 'dub' : 'sub';
+
+    if (!anilistId) return null;
+    return `${MEGAPLAY_BASE_URL}/${encodeURIComponent(anilistId)}/${encodeURIComponent(ep)}/${encodeURIComponent(lang)}`;
+}
+
+function setActiveServerPill(provider, streamType) {
+    const sections = document.getElementById('serverSections');
+    if (!sections) return null;
+
+    sections.querySelectorAll('.server-pill').forEach((pill) => pill.classList.remove('active'));
+
+    const selector = `.server-pill[data-provider="${provider}"]${streamType ? `[data-stream-type="${streamType}"]` : ''}`;
+    const selected = sections.querySelector(selector)
+        || sections.querySelector(`.server-pill[data-provider="${provider}"]`);
+    if (selected) selected.classList.add('active');
+    return selected || null;
+}
+
+function toggleMegaPlayAuxUi(isMegaPlayMode) {
+    const skipIntro = document.getElementById('skipIntroBtn');
+    const skipOutro = document.getElementById('skipOutroBtn');
+    if (isMegaPlayMode) {
+        skipIntro?.remove();
+        skipOutro?.remove();
+    } else if (window.player) {
+        setupSkipButtons();
+    }
+}
+
+function ensureMegaPlayFrame() {
+    const wrapper = document.getElementById('video-wrapper');
+    if (!wrapper) return null;
+
+    let frame = document.getElementById('embedPlayer');
+    if (!frame) {
+        frame = document.createElement('iframe');
+        frame.id = 'embedPlayer';
+        frame.className = 'embed-player-frame';
+        frame.allowFullscreen = true;
+        frame.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
+        frame.setAttribute('sandbox', 'allow-forms allow-scripts allow-same-origin allow-presentation');
+        const videoContainer = document.getElementById('videoContainer');
+        if (videoContainer) {
+            wrapper.insertBefore(frame, videoContainer);
+        } else {
+            wrapper.appendChild(frame);
+        }
+    }
+    frame.style.cssText = 'width:100%; height:100%; border:none; display:block; position:absolute; top:0; left:0;';
+    return frame;
+}
+
+function switchToFirstFallbackServer(reason = 'fallback') {
+    const state = window._watchState || {};
+    const trySections = ['#hlsServerPills', '#embedServerPills'];
+    let targetPill = null;
+
+    for (const sectionId of trySections) {
+        const section = document.querySelector(sectionId);
+        if (!section) continue;
+        const pills = Array.from(section.querySelectorAll('.server-pill'));
+        targetPill = pills.find((pill) => {
+            if (pill.dataset.provider === MEGAPLAY_PROVIDER) return false;
+            if (pill.disabled) return false;
+            if (pill.classList.contains('unavailable')) return false;
+            if (pill.style.display === 'none') return false;
+            return true;
+        });
+        if (targetPill) break;
+    }
+
+    if (!targetPill) {
+        console.warn('[MegaPlay] No fallback server available');
+        return;
+    }
+
+    const provider = targetPill.dataset.provider;
+    const streamType = targetPill.dataset.streamType || 'hls';
+    state.provider = provider;
+    state._desiredStreamType = streamType;
+    setActiveServerPill(provider, streamType);
+    console.warn(`[MegaPlay] Switching to fallback server (${reason}):`, provider, streamType);
+    fetchAndLoadSources();
+}
+
+function handleMegaPlayActivation() {
+    const videoContainer = document.getElementById('videoContainer');
+    if (videoContainer) videoContainer.style.display = 'none';
+
+    const frame = ensureMegaPlayFrame();
+    const megaUrl = buildMegaPlayUrl();
+    if (!frame || !megaUrl) {
+        switchToFirstFallbackServer('missing_anilist_or_frame');
+        return;
+    }
+
+    // Reset once-per-episode progress trigger when embed URL changes.
+    if (_megaPlayLastEmbedUrl !== megaUrl) {
+        _megaPlayLastEmbedUrl = megaUrl;
+        _megaPlayProgressMarked = false;
+    }
+
+    frame.src = megaUrl;
+    ensureEmbedFullscreenBtn();
+    const fsBtn = document.getElementById('embedFullscreenBtn');
+    if (fsBtn) fsBtn.style.display = '';
+    toggleMegaPlayAuxUi(true);
+}
+
+function invokeIfFunction(fnRef, ...args) {
+    if (typeof fnRef !== 'function') return false;
+    try {
+        fnRef(...args);
+        return true;
+    } catch (err) {
+        console.warn('[MegaPlay] Existing handler threw:', err);
+        return false;
+    }
+}
+
+function callExistingAutoNextHandlers() {
+    const candidates = [
+        window.autoNextEpisode,
+        window.goToNextEpisode,
+        window.playNextEpisode,
+        window.triggerAutoNextEpisode,
+        window.handleEpisodeComplete,
+    ];
+    return candidates.some((fn) => invokeIfFunction(fn));
+}
+
+function callExistingProgressHandlers() {
+    const candidates = [
+        window.syncAniListProgress,
+        window.syncMALProgress,
+        window.syncWatchProgress,
+        window.saveWatchProgress,
+        window.updateWatchProgress,
+        window.markEpisodeWatched,
+    ];
+
+    let called = candidates.some((fn) => invokeIfFunction(fn));
+    // Local existing function in this file (not always exposed on window).
+    if (!called && typeof markEpisodeWatched === 'function') {
+        called = invokeIfFunction(markEpisodeWatched);
+    }
+    return called;
+}
+
+function extractMegaPlayPayload(eventData) {
+    if (!eventData) return null;
+    if (typeof eventData === 'string') return { event: eventData };
+    if (typeof eventData !== 'object') return null;
+
+    const base = eventData.data && typeof eventData.data === 'object'
+        ? { ...eventData, ...eventData.data }
+        : eventData;
+
+    const eventName = base.event || base.type || base.name || base.action;
+    if (!eventName) return null;
+    return { ...base, event: String(eventName).toLowerCase() };
+}
+
+function extractProgressRatio(payload) {
+    if (!payload || typeof payload !== 'object') return 0;
+
+    const directProgress = Number(payload.progress);
+    if (Number.isFinite(directProgress) && directProgress > 0) {
+        return directProgress > 1 ? (directProgress / 100) : directProgress;
+    }
+
+    const current = Number(payload.currentTime ?? payload.current ?? payload.time ?? payload.position);
+    const duration = Number(payload.duration ?? payload.totalDuration ?? payload.total);
+    if (!Number.isFinite(current) || !Number.isFinite(duration) || duration <= 0) return 0;
+    return current / duration;
+}
+
+function handleMegaPlayMessage(event) {
+    if (event.origin !== MEGAPLAY_ORIGIN) return;
+    if (!isMegaPlayActive()) return;
+
+    const payload = extractMegaPlayPayload(event.data);
+    if (!payload?.event) return;
+
+    if (payload.event === 'complete') {
+        callExistingAutoNextHandlers();
+        return;
+    }
+
+    if (payload.event === 'watching-log' || payload.event === 'time') {
+        const ratio = extractProgressRatio(payload);
+        if (ratio > 0.85 && !_megaPlayProgressMarked) {
+            _megaPlayProgressMarked = true;
+            callExistingProgressHandlers();
+        }
+        return;
+    }
+
+    if (payload.event === 'error') {
+        switchToFirstFallbackServer('megaplay_error');
+    }
+}
+window.addEventListener('message', handleMegaPlayMessage);
+
 // ── Initialize Watch Page with Vidstack Player (Web Component) ──────────
 document.addEventListener('DOMContentLoaded', () => {
     const player = document.querySelector('#vidstackPlayer');
@@ -71,6 +310,7 @@ let _playerAbort = null;
 function setupSkipButtons() {
     const player = window.player;
     if (!player) return;
+    if (isMegaPlayActive()) return;
 
     // Cancel all previous time-update/skip listeners
     if (_playerAbort) _playerAbort.abort();
@@ -151,6 +391,7 @@ function setupSkipButtons() {
 function rebuildChaptersTrack() {
     const player = window.player;
     if (!player) return;
+    if (isMegaPlayActive()) return;
 
     const cfg = window.WATCH_CONFIG;
     if (!cfg) return;
@@ -303,13 +544,30 @@ function markEpisodeWatched() {
 
 // ── Watch State for AJAX ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    const startWithMegaPlay = canUseMegaPlay();
     window._watchState = {
         animeId: window.WATCH_CONFIG?.animeId,
         episodeNumber: window._urlEpNum || window.WATCH_CONFIG?.episodeNumber,
         language: window.WATCH_CONFIG?.language,
-        provider: window.WATCH_CONFIG?.provider,
+        provider: startWithMegaPlay ? MEGAPLAY_PROVIDER : window.WATCH_CONFIG?.provider,
         providers: window.WATCH_CONFIG?.providers
     };
+
+    if (startWithMegaPlay) {
+        window._watchState._desiredStreamType = 'embed';
+        setActiveServerPill(MEGAPLAY_PROVIDER, 'embed');
+        try {
+            localStorage.setItem('yumePreferredServer', MEGAPLAY_PROVIDER);
+            document.cookie = `preferred_server=${MEGAPLAY_PROVIDER}; path=/; max-age=31536000`;
+        } catch (e) { }
+        fetchAndLoadSources();
+    } else {
+        const mpPill = document.querySelector('.server-pill[data-provider="megaplay"]');
+        if (mpPill) {
+            mpPill.classList.add('unavailable');
+            mpPill.disabled = true;
+        }
+    }
 });
 
 // ── Server Switching ────────────────────────────────────────────
@@ -337,6 +595,17 @@ function fetchAndLoadSources() {
 
     const serverSections = document.getElementById('serverSections');
     if (serverSections) serverSections.classList.add('loading');
+
+    if (state.provider === MEGAPLAY_PROVIDER) {
+        if (!canUseMegaPlay()) {
+            if (serverSections) serverSections.classList.remove('loading');
+            switchToFirstFallbackServer('megaplay_not_supported');
+            return;
+        }
+        handleMegaPlayActivation();
+        if (serverSections) serverSections.classList.remove('loading');
+        return;
+    }
 
     fetch('/api/watch/sources', {
         method: 'POST',
@@ -416,6 +685,7 @@ function fetchAndLoadSources() {
                 // Hide fullscreen button (only for embed)
                 const fsBtn = document.getElementById('embedFullscreenBtn');
                 if (fsBtn) fsBtn.style.display = 'none';
+                toggleMegaPlayAuxUi(false);
             } else if (embedSources.length > 0) {
                 if (videoContainer) videoContainer.style.display = 'none';
 
@@ -436,6 +706,7 @@ function fetchAndLoadSources() {
                 ensureEmbedFullscreenBtn();
                 const fsBtn = document.getElementById('embedFullscreenBtn');
                 if (fsBtn) fsBtn.style.display = '';
+                toggleMegaPlayAuxUi(false);
             }
 
             // Clear desired stream type after use
@@ -457,6 +728,13 @@ function updateProviderPills(caps) {
 
         section.querySelectorAll('.server-pill').forEach(pill => {
             const pName = pill.dataset.provider;
+            if (pName === MEGAPLAY_PROVIDER) {
+                const enableMp = canUseMegaPlay();
+                pill.classList.toggle('unavailable', !enableMp);
+                pill.disabled = !enableMp;
+                pill.style.display = '';
+                return;
+            }
             const hasCaps = id === 'hlsServerPills'
                 ? caps[pName]?.hls
                 : caps[pName]?.embed;
@@ -528,8 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { }
 
         // Update active states
-        sections.querySelectorAll('.server-pill').forEach(p => p.classList.remove('active'));
-        pill.classList.add('active');
+        setActiveServerPill(provider, streamType);
 
         fetchAndLoadSources();
     });

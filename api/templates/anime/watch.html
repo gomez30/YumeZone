@@ -158,7 +158,28 @@
                         <!-- Server Sections: INTERNAL (HLS) & EXTERNAL (Embed) -->
                         {% if episodes and episodes.providers_map %}
                         {% set default_p = selected_server or episodes.default_provider %}
+                        {% set megaplay_anilist_id = (anime.get('anilistId') if anime else none) or (anime.get('alID') if anime else none) %}
                         <div class="server-sections" id="serverSections">
+                            <!-- DEFAULT -->
+                            <div class="server-section">
+                                <div class="server-section-label">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2l2.9 6.26L22 9.27l-5 4.87L18.18 22 12 18.77 5.82 22 7 14.14 2 9.27l7.1-1.01L12 2z"></path>
+                                    </svg>
+                                    DEFAULT
+                                </div>
+                                <div class="server-section-pills">
+                                    <button
+                                        class="server-pill {% if not megaplay_anilist_id %}unavailable{% endif %}"
+                                        data-stream-type="embed" data-provider="megaplay"
+                                        {% if not megaplay_anilist_id %}disabled{% endif %}>
+                                        MegaPlay
+                                        <span class="srv-badge badge-embed">EMBED</span>
+                                        <span class="srv-badge">DEFAULT</span>
+                                    </button>
+                                </div>
+                            </div>
                             <!-- INTERNAL (HLS) -->
                             <div class="server-section">
                                 <div class="server-section-label">
@@ -631,6 +652,7 @@
 <script>
     window.WATCH_CONFIG = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
+        anilistId: {{ (((anime.get('anilistId') if anime else none) or (anime.get('alID') if anime else none)) | tojson | safe) if anime else 'null' }},
         episodeNumber: {{ episode_number or 1 }},
         language: '{{ lang }}',
         provider: '{{ selected_server or "" }}',
