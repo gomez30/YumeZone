@@ -1,0 +1,390 @@
+/* Human Verification Popup */
+#human-verification-popup.popup-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.35);
+  z-index: 12000;
+  overflow-y: auto;
+}
+
+body.hv-popup-open {
+  overflow: hidden;
+}
+
+#human-verification-popup .popup-logo {
+  display: block;
+  max-width: 120px;
+  margin: 0 auto 15px;
+  border-radius: 10px;
+}
+
+#human-verification-popup .popup-content {
+  position: relative;
+  max-width: 700px;
+  width: 95%;
+  margin: 80px auto;
+  padding: 30px 20px;
+  background: linear-gradient(145deg, #ffffff, #f3f3f3);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  color: #333;
+}
+
+#human-verification-popup .popup-content h2 {
+  font-size: 1.8rem;
+  color: #007bff;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+#human-verification-popup .popup-content p {
+  font-size: 1rem;
+  margin-top: 8px;
+  line-height: 1.5;
+  color: #555;
+}
+
+#human-verification-popup .verify-btn {
+  padding: 10px 25px;
+  font-size: 1.1rem;
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 8px;
+}
+
+#human-verification-popup .verify-btn:hover {
+  background-color: #218838;
+  transform: scale(1.05);
+}
+
+#human-verification-popup .verify-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+#human-verification-popup .instructions {
+  font-size: 0.95rem;
+  color: #000;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+#human-verification-popup .how-to-btn {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  padding: 8px 15px;
+  background-color: #007bff;
+  color: #fff;
+  border-radius: 5px;
+  text-decoration: none;
+}
+
+#human-verification-popup .how-to-btn:hover {
+  background-color: #0056b3;
+}
+
+#human-verification-popup #instructions-container .instruction-section {
+  margin-top: 15px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+#human-verification-popup #instructions-container .instruction-section h3 {
+  font-size: 1.2rem;
+  color: #007bff;
+  margin-bottom: 5px;
+}
+
+#human-verification-popup #instructions-container .instruction-section p {
+  font-size: 1rem;
+  color: #333;
+}
+
+#human-verification-popup .verify-fallback-message {
+  color: #b00020;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+#human-verification-popup .live-counter-container {
+  background: #000;
+  padding: 8px 12px;
+  border-radius: 12px;
+  width: 220px;
+  margin: 20px auto;
+  display: flex;
+  align-items: center;
+  color: #fff;
+  border: 1px solid #333;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.8);
+}
+
+#human-verification-popup .counter-icon {
+  background: linear-gradient(45deg, #28a745, #7dd56f);
+  padding: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+}
+
+#human-verification-popup .counter-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#human-verification-popup .counter-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+#human-verification-popup .counter-number {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+#human-verification-popup .counter-label {
+  font-size: 0.8rem;
+  color: #bbb;
+}
+
+#human-verification-popup .live-indicator {
+  width: 10px;
+  height: 10px;
+  background-color: #ff4d4d;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 77, 77, 0.7);
+  animation: hvPulseModern 1.5s infinite;
+}
+
+@keyframes hvPulseModern {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+#human-verification-popup .comments-container {
+  background: #fff;
+  padding: 20px;
+  margin-top: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+#human-verification-popup .comments-header {
+  overflow: auto;
+  padding-bottom: 5px;
+}
+
+#human-verification-popup .comments-header b {
+  font-size: 1.2rem;
+  color: #333;
+}
+
+#human-verification-popup .comments-container hr {
+  border: 0;
+  border-top: 1px solid #eee;
+}
+
+#human-verification-popup .comment-input-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 10px;
+}
+
+#human-verification-popup .comment-input-wrapper input#comment {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+#human-verification-popup .comment-input-wrapper button#post {
+  background: #3f5b9a;
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+#human-verification-popup .premium-notice {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+#human-verification-popup .premium-notice input#check {
+  margin-right: 5px;
+}
+
+#human-verification-popup .premium-notice span {
+  color: #aaa;
+}
+
+#human-verification-popup .comments-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 5px;
+  margin-top: 20px;
+}
+
+#human-verification-popup .comment {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 15px;
+}
+
+#human-verification-popup .comment:last-child {
+  border-bottom: none;
+}
+
+#human-verification-popup .comment-avatar {
+  margin-right: 15px;
+}
+
+#human-verification-popup .comment-avatar img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+#human-verification-popup .comment-content {
+  flex: 1;
+}
+
+#human-verification-popup .comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#human-verification-popup .comment-name {
+  font-weight: bold;
+  color: #333;
+}
+
+#human-verification-popup .comment-timestamp {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+#human-verification-popup .comment-text {
+  margin: 8px 0;
+  color: #555;
+  font-size: 1rem;
+}
+
+#human-verification-popup .comment-actions button {
+  background: none;
+  border: none;
+  color: #007bff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+#human-verification-popup .comment-actions button:hover {
+  color: #0056b3;
+}
+
+#human-verification-popup .like-count {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+#human-verification-popup .see-more-comments {
+  text-align: center;
+  margin: 20px 0;
+}
+
+#human-verification-popup .see-more-btn {
+  background-color: #ff9800;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+#human-verification-popup .see-more-btn:hover {
+  background-color: #e68900;
+  transform: scale(1.05);
+}
+
+#human-verification-popup .premium-msg {
+  display: none;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #555;
+}
+
+#human-verification-popup .premium-msg.show {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  #human-verification-popup .popup-content {
+    max-width: 500px;
+    padding: 25px;
+  }
+
+  #human-verification-popup .popup-content h2 {
+    font-size: 1.5rem;
+  }
+
+  #human-verification-popup .popup-content p {
+    font-size: 0.95rem;
+  }
+
+  #human-verification-popup .verify-btn {
+    font-size: 1rem;
+    padding: 10px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  #human-verification-popup .popup-content {
+    max-width: 350px;
+    padding: 20px;
+  }
+
+  #human-verification-popup .popup-content h2 {
+    font-size: 1.3rem;
+  }
+
+  #human-verification-popup .popup-content p {
+    font-size: 0.9rem;
+  }
+
+  #human-verification-popup .verify-btn {
+    font-size: 0.9rem;
+    padding: 8px 15px;
+  }
+}

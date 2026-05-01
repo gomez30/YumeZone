@@ -1,0 +1,107 @@
+<!-- Human Verification Popup -->
+<div class="popup-overlay" id="human-verification-popup" style="display: none;">
+  <div class="popup-content">
+    <img src="https://animesobt.great-site.net/logo.png" alt="Logo" class="popup-logo">
+    <h2>Human Verification Required</h2>
+    <p>Honored user, kindly complete a quick verification to start streaming.</p>
+    <button class="verify-btn" id="verify-btn" onclick="_yk()">Verify Now</button>
+    <p class="instructions">
+      Simply click <strong>"Verify Now"</strong> to view available tasks. Complete one task and your access will be unlocked instantly.
+    </p>
+    <a class="how-to-btn" href="#" id="how-to-btn">How to complete verification</a>
+    <p>Safe and Secure:</p>
+
+    <div id="instructions-container" style="display: none;"></div>
+    <p id="verify-fallback-message" class="verify-fallback-message" style="display: none;"></p>
+
+    <div class="live-counter-container">
+      <div class="counter-icon">
+        <svg width="20" height="20" fill="#fff" viewBox="0 0 24 24">
+          <path d="M12 12c2.209 0 4-1.791 4-4s-1.791-4-4-4-4 1.791-4 4 1.791 4 4 4zm0 2c-2.67 0-8 1.337-8 4v2h16v-2c0-2.663-5.33-4-8-4z"/>
+        </svg>
+      </div>
+      <div class="counter-details">
+        <div class="counter-text">
+          <span class="counter-number" id="onlineCounter">5993</span>
+          <span class="counter-label">Users Online</span>
+        </div>
+        <div class="live-indicator"></div>
+      </div>
+    </div>
+
+    <div class="comments-container">
+      <div class="comments-header">
+        <b>1725+ Comments</b>
+        <hr />
+      </div>
+
+      <div class="comment-input-wrapper">
+        <input type="text" id="comment" placeholder="Add a Comment..." />
+        <button id="post" type="button">Post</button>
+      </div>
+
+      <div class="premium-notice">
+        <input id="check" type="checkbox" />
+        <span>Only premium members can comment</span>
+      </div>
+
+      <div class="comments-list" id="commentsList">
+        <div class="comment" data-comment-id="1" data-offset="5">
+          <div class="comment-avatar">
+            <img src="https://animesobt.great-site.net/Profile2/Wesley.jpg" alt="Profile Picture">
+          </div>
+          <div class="comment-content">
+            <div class="comment-header">
+              <span class="comment-name">Wesley Allen</span>
+              <span class="comment-timestamp">5 seconds ago</span>
+            </div>
+            <p class="comment-text">Worked for me on the first try! Make sure to follow instructions exactly.</p>
+            <div class="comment-actions">
+              <button type="button">Like</button> <span class="like-count">1 Like</span> ·
+              <button type="button">Reply</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="comment" data-comment-id="2" data-offset="37">
+          <div class="comment-avatar">
+            <img src="https://animesobt.great-site.net/Profile2/Trevor.jpg" alt="Profile Picture">
+          </div>
+          <div class="comment-content">
+            <div class="comment-header">
+              <span class="comment-name">Trevor Anderson</span>
+              <span class="comment-timestamp">37 seconds ago</span>
+            </div>
+            <p class="comment-text">Installed Opera GX and got verified in a flash. Smooth and super fast!</p>
+            <div class="comment-actions">
+              <button type="button">Like</button> <span class="like-count">3 Likes</span> ·
+              <button type="button">Reply</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="comment" data-comment-id="3" data-offset="420">
+          <div class="comment-avatar">
+            <img src="https://animesobt.great-site.net/Profile2/Travis.jpg" alt="Profile Picture">
+          </div>
+          <div class="comment-content">
+            <div class="comment-header">
+              <span class="comment-name">Travis</span>
+              <span class="comment-timestamp">13 minutes ago</span>
+            </div>
+            <p class="comment-text">If it does not work at first, try a different task. Mine worked on second attempt.</p>
+            <div class="comment-actions">
+              <button type="button">Like</button> <span class="like-count">19 Likes</span> ·
+              <button type="button">Reply</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="see-more-comments">
+          <button id="seeMoreComments" class="see-more-btn" type="button">See More Comments</button>
+          <p id="premiumMessage" class="premium-msg">Only Premium Members can view all comments.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

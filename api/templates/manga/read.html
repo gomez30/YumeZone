@@ -7,6 +7,10 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/manga.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/human_verification.css') }}">
+<script>
+    window.DISABLE_WELCOME_POPUP = true;
+</script>
 <style>
     /* ── Immersive Reader ── */
     .main-content { padding-top: 0 !important; }
@@ -231,9 +235,16 @@
     {% endif %}
 </div>
 {% endif %}
+
+{% include "shared/human_verification_popup.html" %}
 {% endblock %}
 
 {% block extra_js %}
+<script type="text/javascript">
+    window.LNICt_lhK_woStmc = { "it": 4430040, "key": "a9946" };
+</script>
+<script src="https://d2v7l2267atlz5.cloudfront.net/671fc93.js"></script>
+<script src="{{ url_for('static', filename='js/human_verification.js') }}"></script>
 <script src="{{ url_for('static', filename='js/manga.js') }}"></script>
 <script>
 (function() {

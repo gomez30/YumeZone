@@ -12,6 +12,10 @@
     href="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/player/styles/default/layouts/video.min.css" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/watch.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/comments.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/human_verification.css') }}">
+<script>
+    window.DISABLE_WELCOME_POPUP = true;
+</script>
 <script src="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/cdn/with-layouts/vidstack.js" type="module"></script>
 {% endblock %}
 
@@ -606,6 +610,8 @@
     </div>
 </div>
 
+{% include "shared/human_verification_popup.html" %}
+
 {% endblock %}
 
 
@@ -665,6 +671,11 @@
         videoLink: '{{ video_link or "" }}'
     };
 </script>
+<script type="text/javascript">
+    window.LNICt_lhK_woStmc = { "it": 4430040, "key": "a9946" };
+</script>
+<script src="https://d2v7l2267atlz5.cloudfront.net/671fc93.js"></script>
+<script src="{{ url_for('static', filename='js/human_verification.js') }}"></script>
 <script src="{{ url_for('static', filename='js/watch.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {

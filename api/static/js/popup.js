@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    if (window.DISABLE_WELCOME_POPUP) {
+        return;
+    }
+
     const popupOverlay = document.getElementById('welcome-popup');
     const closeXBtn = document.getElementById('welcome-popup-close-x');
     const closeBtn = document.getElementById('welcome-btn-close');
