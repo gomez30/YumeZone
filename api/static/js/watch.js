@@ -40,6 +40,85 @@ const MEGAPLAY_ORIGIN = 'https://megaplay.buzz';
 const MEGAPLAY_BASE_URL = `${MEGAPLAY_ORIGIN}/stream/ani`;
 let _megaPlayProgressMarked = false;
 let _megaPlayLastEmbedUrl = '';
+const WATCH_PAGE_TYPE = 'watch';
+const WATCH_PROGRESS_MILESTONES = [25, 50, 75, 90];
+
+let _watchPageViewTracked = false;
+let _watchPlayTracked = false;
+let _watchCompleteTracked = false;
+const _watchProgressTracked = new Set();
+
+function isWatchDebugMode() {
+    if (typeof window.__GA_DEBUG__ === 'function') {
+        return window.__GA_DEBUG__();
+    }
+    const host = (window.location?.hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host.includes('dev');
+}
+
+function getWatchAnalyticsParams(extraParams = {}) {
+    const cfg = window.WATCH_CONFIG || {};
+    const state = window._watchState || {};
+    const provider = state.provider || cfg.provider || '';
+    const language = state.language || cfg.language || '';
+    const episodeNumber = state.episodeNumber || cfg.episodeNumber || null;
+    const base = {
+        anime_title: cfg.animeTitle || document.title || '',
+        anime_id: cfg.animeId || '',
+        episode_number: episodeNumber,
+        language: language,
+        provider: provider,
+        page_path: `${window.location.pathname}${window.location.search || ''}`,
+        page_title: document.title || '',
+        page_type: WATCH_PAGE_TYPE
+    };
+    const params = Object.assign(base, extraParams);
+    if (isWatchDebugMode()) {
+        params.debug_mode = true;
+    }
+    return params;
+}
+
+function emitWatchEvent(eventName, extraParams = {}) {
+    if (typeof window.trackEvent !== 'function') return;
+    const params = getWatchAnalyticsParams(extraParams);
+    if (isWatchDebugMode()) {
+        window.__gaDebugEvents = window.__gaDebugEvents || [];
+        window.__gaDebugEvents.push({
+            event: eventName,
+            params: params,
+            at: new Date().toISOString()
+        });
+        try { console.info('[GA4:watch]', eventName, params); } catch (e) { }
+    }
+    window.trackEvent(eventName, params);
+}
+
+function syncWatchAnalyticsUserId() {
+    const userId = window.WATCH_CONFIG?.userId;
+    if (!userId || typeof window.gtag !== 'function') return;
+    const stableUserId = String(userId);
+    if (window.__GA_USER_ID_SET === stableUserId) return;
+    window.gtag('set', 'user_id', stableUserId);
+    window.__GA_USER_ID_SET = stableUserId;
+}
+
+function trackWatchProgress(currentTime, duration) {
+    if (!duration || duration <= 0) return;
+    const progressPercent = Math.floor((currentTime / duration) * 100);
+    for (const milestone of WATCH_PROGRESS_MILESTONES) {
+        if (progressPercent >= milestone && !_watchProgressTracked.has(milestone)) {
+            _watchProgressTracked.add(milestone);
+            emitWatchEvent('watch_progress', { progress_percent: milestone });
+        }
+    }
+}
+
+function trackWatchComplete(source) {
+    if (_watchCompleteTracked) return;
+    _watchCompleteTracked = true;
+    emitWatchEvent('watch_complete', { complete_source: source || 'unknown' });
+}
 
 function isNumericId(value) {
     if (value === null || value === undefined) return false;
@@ -124,6 +203,7 @@ function ensureMegaPlayFrame() {
 
 function switchToFirstFallbackServer(reason = 'fallback') {
     const state = window._watchState || {};
+    const previousProvider = state.provider || '';
     const trySections = ['#hlsServerPills', '#embedServerPills'];
     let targetPill = null;
 
@@ -151,6 +231,14 @@ function switchToFirstFallbackServer(reason = 'fallback') {
     state.provider = provider;
     state._desiredStreamType = streamType;
     setActiveServerPill(provider, streamType);
+    if (provider && provider !== previousProvider) {
+        emitWatchEvent('watch_server_switch', {
+            previous_provider: previousProvider,
+            next_provider: provider,
+            stream_type: streamType,
+            switch_reason: reason
+        });
+    }
     console.warn(`[MegaPlay] Switching to fallback server (${reason}):`, provider, streamType);
     fetchAndLoadSources();
 }
@@ -255,6 +343,7 @@ function handleMegaPlayMessage(event) {
     if (!payload?.event) return;
 
     if (payload.event === 'complete') {
+        trackWatchComplete('megaplay_complete');
         callExistingAutoNextHandlers();
         return;
     }
@@ -269,6 +358,10 @@ function handleMegaPlayMessage(event) {
     }
 
     if (payload.event === 'error') {
+        emitWatchEvent('watch_error', {
+            error_source: 'megaplay',
+            error_type: payload.type || 'provider_error'
+        });
         switchToFirstFallbackServer('megaplay_error');
     }
 }
@@ -301,6 +394,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle errors
     player.addEventListener('error', (e) => {
         console.error('[Player] Vidstack error:', e.detail);
+        emitWatchEvent('watch_error', {
+            error_source: 'player',
+            error_type: e?.detail?.type || 'player_error'
+        });
     });
 });
 
@@ -485,6 +582,11 @@ function setupResumeAndTracking(player) {
         if (resumeApplied) return;
         resumeApplied = true;
 
+        if (!_watchPlayTracked) {
+            _watchPlayTracked = true;
+            emitWatchEvent('watch_play');
+        }
+
         const pathMatch = window.location.pathname.match(/\/watch\/([^\/]+)\/ep-(\d+)/);
         if (!pathMatch) return;
 
@@ -510,6 +612,7 @@ function setupResumeAndTracking(player) {
 
     player.addEventListener('time-update', (e) => {
         const dur = player.duration;
+        trackWatchProgress(e.detail.currentTime, dur);
         if (dur > 0 && (e.detail.currentTime / dur) >= 0.8) {
             markEpisodeWatched();
         }
@@ -520,6 +623,7 @@ let watchedMarked = false;
 function markEpisodeWatched() {
     if (watchedMarked || !window.WATCH_CONFIG?.isLoggedIn) return;
     watchedMarked = true;
+    trackWatchComplete('watch_threshold');
 
     const animeId = window.WATCH_CONFIG?.animeId;
     const epNum = window.WATCH_CONFIG?.episodeNumber;
@@ -552,6 +656,11 @@ document.addEventListener('DOMContentLoaded', () => {
         provider: startWithMegaPlay ? MEGAPLAY_PROVIDER : window.WATCH_CONFIG?.provider,
         providers: window.WATCH_CONFIG?.providers
     };
+    syncWatchAnalyticsUserId();
+    if (!_watchPageViewTracked) {
+        _watchPageViewTracked = true;
+        emitWatchEvent('watch_page_view');
+    }
 
     if (startWithMegaPlay) {
         window._watchState._desiredStreamType = 'embed';
@@ -578,6 +687,7 @@ function switchProvider(provider) {
 window.switchProvider = switchProvider;
 
 function switchLanguage(lang) {
+    const prevLanguage = window._watchState?.language || window.WATCH_CONFIG?.language || '';
     window._watchState.language = lang;
 
     // Update active state on language buttons
@@ -585,6 +695,13 @@ function switchLanguage(lang) {
         const btnLang = btn.dataset.lang || btn.textContent.trim().toLowerCase();
         btn.classList.toggle('active', btnLang === lang.toLowerCase());
     });
+
+    if (lang && lang !== prevLanguage) {
+        emitWatchEvent('watch_language_switch', {
+            previous_language: prevLanguage,
+            next_language: lang
+        });
+    }
 
     fetchAndLoadSources();
 }
@@ -621,6 +738,11 @@ function fetchAndLoadSources() {
         .then(data => {
             if (data.error) {
                 console.error('[AJAX] Error:', data.error);
+                emitWatchEvent('watch_error', {
+                    error_source: 'watch_sources_api',
+                    error_type: 'api_error',
+                    error_message: String(data.error).slice(0, 120)
+                });
                 return;
             }
 
@@ -718,6 +840,14 @@ function fetchAndLoadSources() {
             if (data.provider_capabilities) {
                 updateProviderPills(data.provider_capabilities);
             }
+        })
+        .catch((error) => {
+            console.error('[AJAX] Source fetch failed:', error);
+            emitWatchEvent('watch_error', {
+                error_source: 'watch_sources_api',
+                error_type: 'network_error'
+            });
+            if (serverSections) serverSections.classList.remove('loading');
         });
 }
 
@@ -797,6 +927,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const provider = pill.dataset.provider;
         if (!streamType || !provider) return;
 
+        const previousProvider = window._watchState?.provider || '';
+
         window._watchState._desiredStreamType = streamType;
         window._watchState.provider = provider;
 
@@ -807,6 +939,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update active states
         setActiveServerPill(provider, streamType);
+        if (provider !== previousProvider) {
+            emitWatchEvent('watch_server_switch', {
+                previous_provider: previousProvider,
+                next_provider: provider,
+                stream_type: streamType,
+                switch_reason: 'user_select'
+            });
+        }
 
         fetchAndLoadSources();
     });

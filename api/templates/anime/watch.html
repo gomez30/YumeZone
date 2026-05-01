@@ -658,12 +658,14 @@
 <script>
     window.WATCH_CONFIG = {
         animeId: '{{ anime_id or eps_title.split("?")[0] }}',
+        animeTitle: {{ ((anime_title or (anime.get('name') if anime else none) or (anime.get('title') if anime else none) or '') | tojson | safe) }},
         anilistId: {{ (((anime.get('anilistId') if anime else none) or (anime.get('alID') if anime else none)) | tojson | safe) if anime else 'null' }},
         episodeNumber: {{ episode_number or 1 }},
         language: '{{ lang }}',
         provider: '{{ selected_server or "" }}',
         providers: [{% if sorted_providers %}{% for p in sorted_providers %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% elif episodes and episodes.providers_map %}{% for p in episodes.providers_map.keys() %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}],
         isLoggedIn: {% if is_logged_in %} true{% else %} false{% endif %},
+        userId: {{ (session.get('_id') | tojson | safe) if session.get('_id') else 'null' }},
         serverProgress: {{ server_progress | tojson | safe if server_progress else '{}' }},
         malId: {{ mal_id | tojson | safe if mal_id else 'null' }},
         intro: {{ intro | tojson | safe if intro else 'null' }},

@@ -41,6 +41,44 @@
     {% if config.ENABLE_AUTH and config.ENABLE_TURNSTILE %}
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     {% endif %}
+
+    <!-- Google Analytics (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-PFTJHZMK04"></script>
+    <script>
+        (function () {
+            if (window.__GA4_INITIALIZED__) return;
+            window.__GA4_INITIALIZED__ = true;
+
+            const measurementId = 'G-PFTJHZMK04';
+            const analyticsUserId = {{ (session.get('_id') | tojson | safe) if session.get('_id') else 'null' }};
+
+            window.dataLayer = window.dataLayer || [];
+            window.gtag = window.gtag || function () { dataLayer.push(arguments); };
+            gtag('js', new Date());
+
+            const configPayload = { send_page_view: true };
+            if (analyticsUserId) {
+                configPayload.user_id = String(analyticsUserId);
+                window.__GA_USER_ID_SET = String(analyticsUserId);
+            }
+            gtag('config', measurementId, configPayload);
+
+            window.__GA_DEBUG__ = function () {
+                const host = (window.location && window.location.hostname || '').toLowerCase();
+                return host === 'localhost' || host === '127.0.0.1' || host.includes('dev');
+            };
+
+            window.trackEvent = function (name, params) {
+                if (typeof window.gtag !== 'function') return;
+                const eventParams = Object.assign({}, params || {});
+                if (window.__GA_DEBUG__ && window.__GA_DEBUG__()) {
+                    eventParams.debug_mode = true;
+                    try { console.info('[GA4]', name, eventParams); } catch (e) { }
+                }
+                window.gtag('event', name, eventParams);
+            };
+        })();
+    </script>
     
     <!-- Security: Multi-method DevTools & Automation Detection -->
     <script>
