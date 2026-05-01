@@ -648,7 +648,8 @@ function markEpisodeWatched() {
 
 // ── Watch State for AJAX ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-    const startWithMegaPlay = canUseMegaPlay();
+    const forceInternalDefault = Boolean(window.WATCH_CONFIG?.forceInternalDefault);
+    const startWithMegaPlay = canUseMegaPlay() && !forceInternalDefault;
     window._watchState = {
         animeId: window.WATCH_CONFIG?.animeId,
         episodeNumber: window._urlEpNum || window.WATCH_CONFIG?.episodeNumber,

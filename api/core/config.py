@@ -14,6 +14,13 @@ def _env_bool(name: str, default: bool) -> bool:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
+
+def _env_country_codes(name: str, default_csv: str) -> set[str]:
+    """Parse CSV country codes into an uppercase ISO2 set."""
+    raw_value = os.getenv(name, default_csv) or default_csv
+    values = [part.strip().upper() for part in raw_value.split(",")]
+    return {code for code in values if len(code) == 2 and code.isalpha()}
+
 class Config:
     """Base configuration class"""
     # Prefer FLASK_KEY for backward compatibility, then SECRET_KEY.
@@ -45,6 +52,10 @@ class Config:
 
     # Application settings
     DEBUG = os.getenv("FLASK_ENV") == "development"
+    IPGEOLOCATION_API_KEY = os.getenv("IPGEOLOCATION_API_KEY", "").strip()
+    GEO_DEFAULT_INTERNAL_COUNTRIES = _env_country_codes(
+        "GEO_DEFAULT_INTERNAL_COUNTRIES", "US,GB,CA,AU"
+    )
 
     # Gmail SMTP (for password reset emails)
     GMAIL_USER = os.getenv("GMAIL_USER")

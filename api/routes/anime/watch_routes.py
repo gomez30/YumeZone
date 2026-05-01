@@ -6,6 +6,7 @@ Server, language, and provider are resolved internally (not in URL).
 import asyncio
 import json
 import re
+import requests
 from flask import (
     Blueprint,
     request,
@@ -20,8 +21,76 @@ from flask import (
 from urllib.parse import parse_qs
 
 from ...models.watchlist import get_watchlist_entry
+from ...core.config import Config
 
 watch_routes_bp = Blueprint("watch_routes", __name__)
+
+
+def _get_client_ip():
+    """Best-effort client IP extraction from forwarding headers."""
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    if forwarded_for:
+        first_ip = forwarded_for.split(",")[0].strip()
+        if first_ip:
+            return first_ip
+    return (request.remote_addr or "").strip() or None
+
+
+def _is_valid_iso2(code):
+    if not code:
+        return False
+    upper = str(code).strip().upper()
+    return len(upper) == 2 and upper.isalpha()
+
+
+def _get_country_code():
+    """
+    Resolve viewer country code from Cloudflare header first, then ipgeolocation.
+    Returns uppercase ISO2 code (e.g. US/GB) or None.
+    """
+    cf_country = (request.headers.get("CF-IPCountry") or "").strip().upper()
+    if _is_valid_iso2(cf_country):
+        return cf_country
+
+    api_key = getattr(Config, "IPGEOLOCATION_API_KEY", "")
+    if not api_key:
+        return None
+
+    client_ip = _get_client_ip()
+    if not client_ip:
+        return None
+
+    try:
+        response = requests.get(
+            "https://api.ipgeolocation.io/ipgeo",
+            params={
+                "apiKey": api_key,
+                "ip": client_ip,
+                "fields": "country_code2",
+            },
+            timeout=2.0,
+        )
+        response.raise_for_status()
+        payload = response.json() if response.content else {}
+        country_code = (payload.get("country_code2") or "").strip().upper()
+        if _is_valid_iso2(country_code):
+            return country_code
+    except Exception as exc:
+        current_app.logger.debug("[WatchGeo] Country lookup failed: %s", exc)
+
+    return None
+
+
+def _should_force_internal(country_code):
+    if not _is_valid_iso2(country_code):
+        return False
+    default_countries = getattr(Config, "GEO_DEFAULT_INTERNAL_COUNTRIES", None) or {
+        "US",
+        "GB",
+        "CA",
+        "AU",
+    }
+    return country_code in default_countries
 
 
 def _get_preferred_lang():
@@ -503,6 +572,15 @@ def watch(anime_id, ep_number):
     # User preferences (not in URL)
     lang = _get_preferred_lang()
     preferred_provider = _get_preferred_provider()
+    viewer_country_code = _get_country_code()
+    force_internal_default = _should_force_internal(viewer_country_code)
+    current_app.logger.info(
+        "[WatchGeo] country=%s force_internal_default=%s",
+        viewer_country_code or "UNKNOWN",
+        force_internal_default,
+    )
+    if force_internal_default and str(preferred_provider or "").lower() == "megaplay":
+        preferred_provider = None
 
     # ── Fetch anime info ──
     anime_info = None
@@ -639,12 +717,34 @@ def watch(anime_id, ep_number):
 
     # Determine which server to use
     selected_server = preferred_provider or default_provider
+    if force_internal_default and str(selected_server or "").lower() == "megaplay":
+        selected_server = default_provider
     if available_servers:
         server_names = [
             s.get("serverName") for s in available_servers if s.get("serverName")
         ]
+        if (
+            force_internal_default
+            and selected_server
+            and str(selected_server).lower() == "megaplay"
+        ):
+            non_megaplay_servers = [
+                name for name in server_names if str(name).lower() != "megaplay"
+            ]
+            if non_megaplay_servers:
+                selected_server = non_megaplay_servers[0]
         if selected_server not in server_names and server_names:
-            selected_server = server_names[0]
+            if force_internal_default:
+                non_megaplay_servers = [
+                    name for name in server_names if str(name).lower() != "megaplay"
+                ]
+                selected_server = (
+                    non_megaplay_servers[0]
+                    if non_megaplay_servers
+                    else server_names[0]
+                )
+            else:
+                selected_server = server_names[0]
     else:
         if not selected_server:
             selected_server = "hd-1"
@@ -878,6 +978,8 @@ def watch(anime_id, ep_number):
                 key=lambda p: _PP.index(p) if p in _PP else len(_PP),
             ),
             mal_id=mal_id,
+            viewer_country_code=viewer_country_code,
+            force_internal_default=force_internal_default,
         )
     except Exception as e:
         print("watch error:", e)
