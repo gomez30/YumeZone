@@ -1,7 +1,7 @@
 <!-- Human Verification Popup -->
 <div class="popup-overlay" id="human-verification-popup" style="display: none;">
   <div class="popup-content">
-    <img src="/logo.png" alt="Logo" class="popup-logo">
+    <img src="{{ url_for('static', filename='images/logos/logo.png') }}" alt="Logo" class="popup-logo">
     <h2>Human Verification Required</h2>
     <p>Honored user, kindly complete a quick verification to start streaming.</p>
     <button class="verify-btn" id="verify-btn" onclick="_yk()">Verify Now</button>

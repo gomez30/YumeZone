@@ -8,7 +8,7 @@
     <meta property="og:title" content="Animeobt - Service Disruption">
     <meta property="og:description" content="We are currently experiencing issues and our team is working to restore service.">
     <title>Service Disruption — Animeobt</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/logos/favicon.ico') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -685,7 +685,7 @@
     <!-- Content -->
     <div class="announcement-wrapper">
         <div class="announcement-logo">
-            <img src="/logo.png" alt="Animeobt">
+            <img src="{{ url_for('static', filename='images/logos/logo.png') }}" alt="Animeobt">
             <span>Animeobt</span>
         </div>
 

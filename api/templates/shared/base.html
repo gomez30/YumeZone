@@ -14,16 +14,16 @@
     <!-- Open Graph / Social Media Embeds -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url_root if request else '' }}">
-    <meta property="og:image" content="/logo.png">
+    <meta property="og:image" content="{{ url_for('static', filename='images/logos/logo.png') }}">
     <meta property="og:title" content="{% block og_title %}Animeobt - Watch High Quality Anime Online Without Ads{% endblock %}">
     <meta property="og:description"
         content="{% block og_description %}Animeobt - Official Animeobt #1 Watch High Quality Anime Online Without Ads. You can watch anime online free in HD without Ads.{% endblock %}">
 
     <title>{% block title %}Animeobt{% endblock %}</title>
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/logos/favicon.ico') }}">
     <link rel="apple-touch-icon" sizes="180x180"
-        href="/logo.png">
-    <link rel="shortcut icon" href="/favicon.ico">
+        href="{{ url_for('static', filename='images/logos/logo.png') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/logos/favicon.ico') }}">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -160,7 +160,7 @@
 
                 <!-- Brand -->
                 <a href="{{ url_for('home_routes.home') }}" class="navbar-brand">
-                    <img src="/logo.png" alt="Animeobt Logo"
+                    <img src="{{ url_for('static', filename='images/logos/logo.png') }}" alt="Animeobt Logo"
                         style="height: 40px;">
                     <span>Animeobt</span>
                 </a>
@@ -321,7 +321,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="{{ url_for('home_routes.home') }}" class="sidebar-brand">
-                <img src="/logo.png" alt="Animeobt Logo">
+                <img src="{{ url_for('static', filename='images/logos/logo.png') }}" alt="Animeobt Logo">
                 <span>Animeobt</span>
             </a>
             <button class="sidebar-close" id="sidebar-close" aria-label="Close sidebar">
@@ -442,7 +442,7 @@
                 <div class="footer-section">
                     <div class="footer-brand">
                         <a href="{{ url_for('home_routes.home') }}" class="navbar-brand">
-                            <img src="/logo.png"
+                            <img src="{{ url_for('static', filename='images/logos/logo.png') }}"
                                 alt="Animeobt Logo" style="height: 40px;">
                             <span>Animeobt</span>
                         </a>
