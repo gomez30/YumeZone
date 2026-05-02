@@ -22,6 +22,7 @@ from urllib.parse import parse_qs
 
 from ...models.watchlist import get_watchlist_entry
 from ...core.config import Config
+from ...core.cache_headers import set_no_store
 
 watch_routes_bp = Blueprint("watch_routes", __name__)
 
@@ -642,12 +643,20 @@ def watch(anime_id, ep_number):
         # eps_list empty also hits here
         raw_eps = (all_episodes or {}).get("episodes", [])
         if not raw_eps:
-            return render_template(
-                "shared/404.html", error_message="No episodes found for this anime."
-            ), 404
-        return render_template(
-            "shared/404.html", error_message=f"Episode {ep_number} not found."
-        ), 404
+            response = make_response(
+                render_template(
+                    "shared/404.html", error_message="No episodes found for this anime."
+                ),
+                404,
+            )
+            return set_no_store(response)
+        response = make_response(
+            render_template(
+                "shared/404.html", error_message=f"Episode {ep_number} not found."
+            ),
+            404,
+        )
+        return set_no_store(response)
 
     current_item = resolved["episode_item"]
     current_idx = resolved["episode_idx"]
@@ -941,51 +950,57 @@ def watch(anime_id, ep_number):
 
     # ── Render ──
     try:
-        return render_template(
-            "anime/watch.html",
-            back_to_ep=anime_id_clean,
-            anime_id=anime_id_clean,
-            video_link=video_data["video_link"],
-            subtitles=video_data["subtitle_tracks"],
-            intro=video_data["intro"],
-            outro=video_data["outro"],
-            Episode=Episode,
-            episode_number=episode_number,
-            episode_title=episode_title,
-            prev_episode_url=prev_episode_url,
-            next_episode_url=next_episode_url,
-            prev_episode_number=prev_episode_number,
-            next_episode_number=next_episode_number,
-            eps_title=anime_id_clean,
-            anime_title=actual_title,
-            anime=anime,
-            lang=lang,
-            episodes=all_episodes,
-            dub_available=dub_available,
-            selected_server=selected_server,
-            available_servers=available_servers,
-            next_episode_schedule=next_episode_schedule,
-            video_sources=video_data["video_sources"],
-            available_qualities=video_data["available_qualities"],
-            source_type=video_data["source_type"],
-            embed_sources=video_data["embed_sources"],
-            hls_sources=video_data["hls_sources"],
-            server_progress=server_progress_dict,
-            is_logged_in=is_logged_in,
-            provider_capabilities=provider_capabilities,
-            sorted_providers=sorted(
-                (providers_map or {}).keys(),
-                key=lambda p: _PP.index(p) if p in _PP else len(_PP),
-            ),
-            mal_id=mal_id,
-            viewer_country_code=viewer_country_code,
-            force_internal_default=force_internal_default,
+        response = make_response(
+            render_template(
+                "anime/watch.html",
+                back_to_ep=anime_id_clean,
+                anime_id=anime_id_clean,
+                video_link=video_data["video_link"],
+                subtitles=video_data["subtitle_tracks"],
+                intro=video_data["intro"],
+                outro=video_data["outro"],
+                Episode=Episode,
+                episode_number=episode_number,
+                episode_title=episode_title,
+                prev_episode_url=prev_episode_url,
+                next_episode_url=next_episode_url,
+                prev_episode_number=prev_episode_number,
+                next_episode_number=next_episode_number,
+                eps_title=anime_id_clean,
+                anime_title=actual_title,
+                anime=anime,
+                lang=lang,
+                episodes=all_episodes,
+                dub_available=dub_available,
+                selected_server=selected_server,
+                available_servers=available_servers,
+                next_episode_schedule=next_episode_schedule,
+                video_sources=video_data["video_sources"],
+                available_qualities=video_data["available_qualities"],
+                source_type=video_data["source_type"],
+                embed_sources=video_data["embed_sources"],
+                hls_sources=video_data["hls_sources"],
+                server_progress=server_progress_dict,
+                is_logged_in=is_logged_in,
+                provider_capabilities=provider_capabilities,
+                sorted_providers=sorted(
+                    (providers_map or {}).keys(),
+                    key=lambda p: _PP.index(p) if p in _PP else len(_PP),
+                ),
+                mal_id=mal_id,
+                viewer_country_code=viewer_country_code,
+                force_internal_default=force_internal_default,
+            )
         )
+        return set_no_store(response)
     except Exception as e:
         print("watch error:", e)
-        return render_template(
-            "shared/404.html", error_message="An error occurred while fetching the episode."
+        response = make_response(
+            render_template(
+                "shared/404.html", error_message="An error occurred while fetching the episode."
+            )
         )
+        return set_no_store(response)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1002,7 +1017,8 @@ def get_watch_sources():
     """
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Missing request body"}), 400
+        response = make_response(jsonify({"error": "Missing request body"}), 400)
+        return set_no_store(response)
 
     anime_id = data.get("anime_id")
     ep_number = data.get("episode_number")
@@ -1011,7 +1027,11 @@ def get_watch_sources():
     anime_slug = data.get("anime_slug")  # May be passed from frontend
 
     if not anime_id or ep_number is None:
-        return jsonify({"error": "Missing anime_id or episode_number"}), 400
+        response = make_response(
+            jsonify({"error": "Missing anime_id or episode_number"}),
+            400,
+        )
+        return set_no_store(response)
 
     anime_id_clean = str(anime_id).split("?", 1)[0]
 
@@ -1048,7 +1068,8 @@ def get_watch_sources():
         else:
             all_episodes = asyncio.run(current_app.ha_scraper.episodes(anime_id_clean, anime_slug))
     except Exception:
-        return jsonify({"error": "Failed to fetch episodes"}), 500
+        response = make_response(jsonify({"error": "Failed to fetch episodes"}), 500)
+        return set_no_store(response)
 
     providers_map = all_episodes.get("providers_map", {}) if all_episodes else {}
     default_provider = (
@@ -1072,7 +1093,8 @@ def get_watch_sources():
             episode_id = resolved["episode_id"]
 
     if not episode_id:
-        return jsonify({"error": f"Episode {ep_number} not found"}), 404
+        response = make_response(jsonify({"error": f"Episode {ep_number} not found"}), 404)
+        return set_no_store(response)
 
     # Build full slug
     if episode_id.startswith("watch/"):
@@ -1130,4 +1152,4 @@ def get_watch_sources():
         "preferred_server", provider_name, max_age=365 * 24 * 60 * 60, samesite="Lax"
     )
 
-    return resp
+    return set_no_store(resp)

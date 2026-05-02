@@ -2,8 +2,9 @@
 Anime information and episodes routes
 """
 import asyncio
-from flask import Blueprint, request, render_template, current_app, session
+from flask import Blueprint, request, render_template, current_app, session, make_response
 from api.models.watchlist import get_watchlist_entry
+from ...core.cache_headers import set_no_store
 
 anime_routes_bp = Blueprint('anime_routes', __name__)
 
@@ -16,7 +17,8 @@ async def anime_info(anime_id: str):
     get_schedule_method = getattr(current_app.ha_scraper, "next_episode_schedule", None)
     
     if not get_info_method:
-        return "Anime info function not found", 500
+        response = make_response("Anime info function not found", 500)
+        return set_no_store(response)
         
     try:
         anime_info, next_episode_schedule = await asyncio.gather(
@@ -37,7 +39,8 @@ async def anime_info(anime_id: str):
         next_episode_schedule = None
         
     if not anime_info:
-        return f"No info found for anime ID: {anime_id}", 404
+        response = make_response(f"No info found for anime ID: {anime_id}", 404)
+        return set_no_store(response)
     
     # Normalize: if the payload nests under "info", extract it
     if isinstance(anime_info, dict) and "info" in anime_info and isinstance(anime_info["info"], dict):
@@ -107,13 +110,16 @@ async def anime_info(anime_id: str):
             current_app.logger.error(f"Error fetching watchlist for anime info: {e}")
 
     current_app.logger.debug("Rendering anime page for id=%s, anime keys=%s", anime.get("id"), list(anime.keys()))
-    return render_template(
-        "anime/info.html",
-        anime=anime,
-        suggestions=suggestions,
-        next_episode_schedule=next_episode_schedule,
-        current_path=current_path,
-        current_season_id=anime_id,
-        user_watched_episodes=user_watched_episodes
+    response = make_response(
+        render_template(
+            "anime/info.html",
+            anime=anime,
+            suggestions=suggestions,
+            next_episode_schedule=next_episode_schedule,
+            current_path=current_path,
+            current_season_id=anime_id,
+            user_watched_episodes=user_watched_episodes
+        )
     )
+    return set_no_store(response)
 

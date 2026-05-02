@@ -2,7 +2,8 @@
 Home and index routes
 """
 import asyncio
-from flask import Blueprint, redirect, render_template, current_app
+from flask import Blueprint, redirect, render_template, current_app, make_response
+from ...core.cache_headers import apply_cache
 
 home_routes_bp = Blueprint('home_routes', __name__)
 
@@ -38,7 +39,10 @@ def home():
 
         movies = (movie_data or {}).get("animes", [])
         current_app.logger.debug("home counts: %s", data.get("counts"))
-        return render_template("shared/index.html", suggestions=data, movies=movies, info=info)
+        response = make_response(
+            render_template("shared/index.html", suggestions=data, movies=movies, info=info)
+        )
+        return apply_cache(response, s_maxage=60, swr=30)
     except Exception as e:
         current_app.logger.exception("Unhandled error in /home")
         empty = {
@@ -49,10 +53,13 @@ def home():
                 "trendingAnimes"
             ]
         }
-        return render_template(
-            "shared/index.html",
-            suggestions={"success": False, "data": empty, "counts": {}},
-            movies=[],
-            error=f"Error fetching home page data: {e}",
-            info=info
+        response = make_response(
+            render_template(
+                "shared/index.html",
+                suggestions={"success": False, "data": empty, "counts": {}},
+                movies=[],
+                error=f"Error fetching home page data: {e}",
+                info=info
+            )
         )
+        return apply_cache(response, s_maxage=60, swr=30)

@@ -2,7 +2,8 @@
 Search routes
 """
 import asyncio
-from flask import Blueprint, request, redirect, url_for, render_template, jsonify, current_app
+from flask import Blueprint, request, redirect, url_for, render_template, jsonify, current_app, make_response
+from ...core.cache_headers import apply_cache
 
 search_routes_bp = Blueprint('search_routes', __name__)
 
@@ -42,11 +43,14 @@ def search():
 
             mapped.append(anime)
 
-        return render_template(
-            'anime/results.html',
-            query=search_query,
-            animes=mapped
+        response = make_response(
+            render_template(
+                'anime/results.html',
+                query=search_query,
+                animes=mapped
+            )
         )
+        return apply_cache(response, s_maxage=120, swr=60)
 
     except Exception as e:
         print("Search error:", e)
@@ -59,7 +63,8 @@ def search_suggestions_route():
     query = request.args.get('q', '').strip()
 
     if not query:
-        return jsonify({"suggestions": []})
+        response = make_response(jsonify({"suggestions": []}))
+        return apply_cache(response, s_maxage=300, swr=60)
 
     try:
         loop = asyncio.new_event_loop()
@@ -69,8 +74,10 @@ def search_suggestions_route():
         )
         loop.close()
 
-        return jsonify(suggestions)
+        response = make_response(jsonify(suggestions))
+        return apply_cache(response, s_maxage=300, swr=60)
 
     except Exception as e:
         print("Suggestion error:", e)
-        return jsonify({"suggestions": []})
+        response = make_response(jsonify({"suggestions": []}))
+        return apply_cache(response, s_maxage=300, swr=60)

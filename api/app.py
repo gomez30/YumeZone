@@ -147,6 +147,14 @@ def create_app():
         app.logger.warning(f"Rate limit: {request.url} — {request.remote_addr}")
         return jsonify(success=False, message="Too many attempts. Please try again later."), 429
 
+    @app.after_request
+    def default_cache_policy(response):
+        # Only set if no explicit Cache-Control already present
+        if "Cache-Control" not in response.headers:
+            # Safe default: do not cache unhandled routes
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
     return app
 
 
