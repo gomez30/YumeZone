@@ -3,9 +3,9 @@
   inset: 0;
   z-index: 12000;
   overflow-y: auto;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.15);
+  /* backdrop-filter: blur(8px); */
+  /* -webkit-backdrop-filter: blur(8px); */
   padding: 24px 12px;
 }
 
