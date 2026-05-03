@@ -16,6 +16,11 @@
 <script>
     window.DISABLE_WELCOME_POPUP = true;
 </script>
+<script>
+    window.SHOW_HV_IMMEDIATELY = true;
+    window.CURRENT_ANIME_TITLE = "{{ anime_title | e }}";
+    window.CURRENT_EPISODE = "{{ Episode | e }}";
+</script>
 <script src="https://cdn.jsdelivr.net/npm/vidstack@1.12.13/cdn/with-layouts/vidstack.js" type="module"></script>
 {% endblock %}
 
