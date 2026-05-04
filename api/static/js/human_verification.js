@@ -6,12 +6,7 @@
     const DELAY_MS = 2 * 60 * 1000; // delay before first show
     const SHOW_TIME_MS = 5 * 60 * 1000; // how long popup stays open
     const WEEKLY_RESET_MS = 7 * 24 * 60 * 60 * 1000; // re-show interval
-    const NUM_OFFERS = 4; // offer cards to show (max 10)
-    const PINNED_OFFER_IDS = []; // paste AdBlueMedia offer IDs here to prioritize them
-    const FEED_URL = "https://d1cdbd1x576ga0.cloudfront.net/public/offers/feed.php";
-    const USER_ID = "297501";
-    const API_KEY = "acceaf11cc22907f24407763e97387cb";
-    const CHECK_URL = "https://d1cdbd1x576ga0.cloudfront.net/public/external/check2.php";
+    // API offer feed and postback URL are disabled for button-triggered flow.
 
     const STORAGE_KEYS = {
         unlockedAt: "yzUnlockedAt",
@@ -35,17 +30,12 @@
 
     const state = {
         isVisible: false,
-        offers: [],
         feedEntries: [],
-        feedOfferIndex: 0,
         feedUserIndex: 0,
         feedTimer: null,
         feedAgeTimer: null,
         showTimer: null,
         closeTimer: null,
-        pollInterval: null,
-        pollCountdownInterval: null,
-        pollSeconds: 15,
     };
 
     function byId(id) {
@@ -121,7 +111,6 @@
         shell.setAttribute("aria-hidden", "true");
         lockBody(false);
         state.isVisible = false;
-        stopPolling();
         stopLiveFeed();
         clearTimeout(state.closeTimer);
     }
@@ -133,47 +122,6 @@
         if (episode) episode.textContent = window.CURRENT_EPISODE || "EPISODE_PLACEHOLDER";
     }
 
-    function limitNumOffers() {
-        return Math.max(1, Math.min(10, NUM_OFFERS));
-    }
-
-    function getOfferId(item) {
-        if (!item || typeof item !== "object") return "";
-        const raw = item.id || item.offer_id || item.offerId || item.campaign_id || item.cid || "";
-        return String(raw);
-    }
-
-    function getOfferName(item) {
-        return (item && (item.name || item.anchor || item.title)) ? String(item.name || item.anchor || item.title) : "featured task";
-    }
-
-    function shortOfferName(name) {
-        const clean = String(name || "featured task").trim();
-        if (clean.length <= 28) return clean;
-        return clean.slice(0, 25) + "...";
-    }
-
-    function sortAndSliceOffers(items) {
-        const cloned = items.slice();
-        if (PINNED_OFFER_IDS.length > 0) {
-            const orderMap = {};
-            PINNED_OFFER_IDS.forEach(function (id, index) {
-                orderMap[String(id)] = index;
-            });
-            cloned.sort(function (a, b) {
-                const aId = getOfferId(a);
-                const bId = getOfferId(b);
-                const aPinned = Object.prototype.hasOwnProperty.call(orderMap, aId);
-                const bPinned = Object.prototype.hasOwnProperty.call(orderMap, bId);
-                if (aPinned && bPinned) return orderMap[aId] - orderMap[bId];
-                if (aPinned) return -1;
-                if (bPinned) return 1;
-                return 0;
-            });
-        }
-        return cloned.slice(0, limitNumOffers());
-    }
-
     function renderLoadError(message) {
         const list = byId("yz-offer-list");
         if (!list) return;
@@ -182,126 +130,6 @@
         box.className = "yz-note";
         box.textContent = message || "Could not load tasks. Please refresh and try again.";
         list.appendChild(box);
-    }
-
-    function openTask(item) {
-        const targetUrl = item && item.url ? String(item.url) : "";
-        if (targetUrl) {
-            window.open(targetUrl, "_blank", "noopener,noreferrer");
-        }
-        const list = byId("yz-offer-list");
-        const polling = byId("yz-polling-status");
-        if (list) list.style.display = "none";
-        if (polling) polling.style.display = "block";
-        startPolling();
-    }
-
-    function createTaskCard(item) {
-        const card = document.createElement("button");
-        card.type = "button";
-        card.className = "yz-task-card";
-
-        const iconWrap = document.createElement("div");
-        iconWrap.className = "yz-task-icon-wrap";
-        const iconUrl = item && item.network_icon ? String(item.network_icon) : "";
-        if (iconUrl) {
-            const img = document.createElement("img");
-            img.src = iconUrl;
-            img.alt = "task icon";
-            img.className = "yz-task-icon";
-            img.onerror = function () {
-                iconWrap.textContent = "🎯";
-                iconWrap.classList.add("yz-task-icon-fallback");
-            };
-            iconWrap.appendChild(img);
-        } else {
-            iconWrap.textContent = "🎯";
-            iconWrap.classList.add("yz-task-icon-fallback");
-        }
-
-        const body = document.createElement("div");
-        body.className = "yz-task-body";
-        const title = document.createElement("div");
-        title.className = "yz-task-title";
-        title.textContent = item && item.anchor ? String(item.anchor) : getOfferName(item);
-        const conversion = document.createElement("div");
-        conversion.className = "yz-task-meta";
-        conversion.textContent = "✅ " + (item && item.conversion ? String(item.conversion) : "Complete the task to unlock instantly");
-        body.appendChild(title);
-        body.appendChild(conversion);
-
-        const action = document.createElement("span");
-        action.className = "yz-task-action";
-        action.textContent = "Unlock →";
-
-        card.appendChild(iconWrap);
-        card.appendChild(body);
-        card.appendChild(action);
-        card.addEventListener("click", function () {
-            openTask(item);
-        });
-        return card;
-    }
-
-    function renderOffers(items) {
-        const list = byId("yz-offer-list");
-        if (!list) return;
-        list.innerHTML = "";
-        if (!items.length) {
-            renderLoadError("No tasks available right now. Please try again in a minute.");
-            return;
-        }
-        items.forEach(function (item) {
-            list.appendChild(createTaskCard(item));
-        });
-    }
-
-    function parseOffers(payload) {
-        if (Array.isArray(payload)) return payload;
-        if (payload && Array.isArray(payload.offers)) return payload.offers;
-        if (payload && Array.isArray(payload.data)) return payload.data;
-        return [];
-    }
-
-    function fetchOffers() {
-        return new Promise(function (resolve, reject) {
-            const callbackName = "__yzOffers_" + Date.now();
-            const script = document.createElement("script");
-            const ua = encodeURIComponent(navigator.userAgent || "");
-            script.src = FEED_URL +
-                "?user_id=" + USER_ID +
-                "&api_key=" + API_KEY +
-                "&user_agent=" + ua +
-                "&s1=yumezone&callback=" + callbackName;
-
-            function cleanup() {
-                delete window[callbackName];
-                script.onerror = null;
-                if (script.parentNode) script.parentNode.removeChild(script);
-            }
-
-            window[callbackName] = function (offers) {
-                cleanup();
-                const raw = parseOffers(offers);
-                const selected = sortAndSliceOffers(raw);
-                state.offers = selected;
-                renderOffers(selected);
-                startLiveFeed(selected);
-                resolve();
-            };
-
-            script.onerror = function () {
-                cleanup();
-                state.offers = [];
-                renderLoadError("Could not load tasks. Please refresh and try again.");
-                startLiveFeed([]);
-                reject(new Error("Failed to load offers"));
-            };
-
-            document.head.appendChild(script);
-        }).catch(function () {
-            return undefined;
-        });
     }
 
     function formatAge(seconds) {
@@ -320,7 +148,7 @@
             row.innerHTML =
                 "🔓 <span class=\"yz-feed-user\"></span> unlocked via <span class=\"yz-feed-task\"></span> · <span class=\"yz-feed-time\"></span>";
             row.querySelector(".yz-feed-user").textContent = entry.user;
-            row.querySelector(".yz-feed-task").textContent = shortOfferName(entry.offer);
+            row.querySelector(".yz-feed-task").textContent = entry.offer;
             row.querySelector(".yz-feed-time").textContent = formatAge(entry.ageSec);
             container.appendChild(row);
             entry.isNew = false;
@@ -334,10 +162,7 @@
     }
 
     function nextFeedOfferName() {
-        if (!state.offers.length) return "featured task";
-        const name = getOfferName(state.offers[state.feedOfferIndex % state.offers.length]);
-        state.feedOfferIndex += 1;
-        return name;
+        return "Complete task";
     }
 
     function scheduleFeedPush() {
@@ -387,46 +212,8 @@
         scheduleFeedPush();
     }
 
-    function setPollMessage(message, isError) {
-        const el = byId("yz-poll-message");
-        if (!el) return;
-        if (!message) {
-            el.textContent = "";
-            el.style.display = "none";
-            el.classList.remove("yz-poll-message-error");
-            return;
-        }
-        el.textContent = message;
-        el.style.display = "block";
-        el.classList.toggle("yz-poll-message-error", Boolean(isError));
-    }
-
-    function setPollSeconds(value) {
-        state.pollSeconds = value;
-        const el = byId("yz-poll-seconds");
-        if (el) el.textContent = String(value);
-    }
-
-    function stopPolling() {
-        clearInterval(state.pollInterval);
-        clearInterval(state.pollCountdownInterval);
-        state.pollInterval = null;
-        state.pollCountdownInterval = null;
-        setPollSeconds(15);
-    }
-
-    function backToTasks() {
-        stopPolling();
-        setPollMessage("");
-        const list = byId("yz-offer-list");
-        const polling = byId("yz-polling-status");
-        if (polling) polling.style.display = "none";
-        if (list) list.style.display = "block";
-    }
-
     function unlockAccess() {
         localStorage.setItem(STORAGE_KEYS.unlockedAt, String(Date.now()));
-        stopPolling();
         const main = byId("yz-main-view");
         const success = byId("yz-success-view");
         if (main) main.style.display = "none";
@@ -437,85 +224,18 @@
         }, 3000);
     }
 
-    function checkLeadOnce() {
-        return new Promise(function (resolve) {
-            const callbackName = "__yzLeads_" + Date.now();
-            const script = document.createElement("script");
-            script.src = CHECK_URL + "?testing=0&callback=" + callbackName;
-
-            function cleanup() {
-                delete window[callbackName];
-                script.onerror = null;
-                if (script.parentNode) script.parentNode.removeChild(script);
-            }
-
-            window[callbackName] = function (leads) {
-                cleanup();
-                resolve(Array.isArray(leads) ? leads : []);
-            };
-
-            script.onerror = function () {
-                cleanup();
-                resolve([]);
-            };
-
-            document.head.appendChild(script);
-        }).catch(function () {
-            return [];
-        });
-    }
-
-    function startPolling() {
-        stopPolling();
-        setPollSeconds(15);
-        setPollMessage("");
-
-        function doCheck() {
-            checkLeadOnce().then(function (rows) {
-                if (Array.isArray(rows) && rows.length > 0) {
-                    unlockAccess();
-                }
-            });
-        }
-
-        doCheck();
-        state.pollInterval = window.setInterval(function () {
-            setPollSeconds(15);
-            doCheck();
-        }, 15000);
-        state.pollCountdownInterval = window.setInterval(function () {
-            const next = state.pollSeconds <= 1 ? 15 : state.pollSeconds - 1;
-            setPollSeconds(next);
-        }, 1000);
-    }
-
     function setupActions() {
-        const checkNowBtn = byId("yz-check-now");
-        const backBtn = byId("yz-back-offers");
+        const completeTaskBtn = byId("yz-complete-task-now");
         const closeBtn = byId("yz-close-success");
 
-        if (checkNowBtn) {
-            checkNowBtn.addEventListener("click", function () {
-                if (checkNowBtn.disabled) return;
-                checkNowBtn.disabled = true;
-                checkNowBtn.textContent = "Checking...";
-                checkLeadOnce().then(function (rows) {
-                    if (rows.length > 0) {
-                        unlockAccess();
-                        return;
-                    }
-                    setPollMessage("No completion found yet. Please wait a moment and try again.", true);
-                    window.setTimeout(function () {
-                        checkNowBtn.disabled = false;
-                        checkNowBtn.textContent = "✅ I already completed it — Check now";
-                    }, 5000);
-                });
-            });
-        }
-
-        if (backBtn) {
-            backBtn.addEventListener("click", function () {
-                backToTasks();
+        if (completeTaskBtn) {
+            completeTaskBtn.addEventListener("click", function () {
+                if (typeof window._EQ !== "function") {
+                    renderLoadError("Offer provider is not ready. Please refresh and try again.");
+                    return;
+                }
+                window._EQ();
+                unlockAccess();
             });
         }
 
@@ -530,24 +250,20 @@
         const main = byId("yz-main-view");
         const success = byId("yz-success-view");
         const list = byId("yz-offer-list");
-        const polling = byId("yz-polling-status");
-        setPollMessage("");
         if (main) main.style.display = "block";
         if (success) success.style.display = "none";
         if (list) list.style.display = "block";
-        if (polling) polling.style.display = "none";
     }
 
     function showUnlockFlow() {
         setEpisodeMeta();
         resetViews();
-        fetchOffers().finally(function () {
-            showShell();
-            clearTimeout(state.closeTimer);
-            state.closeTimer = window.setTimeout(function () {
-                hideShell();
-            }, SHOW_TIME_MS);
-        });
+        startLiveFeed();
+        showShell();
+        clearTimeout(state.closeTimer);
+        state.closeTimer = window.setTimeout(function () {
+            hideShell();
+        }, SHOW_TIME_MS);
     }
 
     document.addEventListener("DOMContentLoaded", function () {
