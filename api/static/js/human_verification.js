@@ -8,6 +8,10 @@
     const WEEKLY_RESET_MS = 7 * 24 * 60 * 60 * 1000; // re-show interval
     const NUM_OFFERS = 4; // offer cards to show (max 10)
     const PINNED_OFFER_IDS = []; // paste AdBlueMedia offer IDs here to prioritize them
+    const FEED_URL = "https://d1cdbd1x576ga0.cloudfront.net/public/offers/feed.php";
+    const USER_ID = "297501";
+    const API_KEY = "acceaf11cc22907f24407763e97387cb";
+    const CHECK_URL = "https://d1cdbd1x576ga0.cloudfront.net/public/external/check2.php";
 
     const STORAGE_KEYS = {
         unlockedAt: "yzUnlockedAt",
@@ -260,23 +264,44 @@
     }
 
     function fetchOffers() {
-        return fetch("/api/offers", { credentials: "same-origin" })
-            .then(function (response) {
-                if (!response.ok) throw new Error("Failed to load offers");
-                return response.json();
-            })
-            .then(function (payload) {
-                const raw = parseOffers(payload);
+        return new Promise(function (resolve, reject) {
+            const callbackName = "__yzOffers_" + Date.now();
+            const script = document.createElement("script");
+            const ua = encodeURIComponent(navigator.userAgent || "");
+            script.src = FEED_URL +
+                "?user_id=" + USER_ID +
+                "&api_key=" + API_KEY +
+                "&user_agent=" + ua +
+                "&s1=yumezone&callback=" + callbackName;
+
+            function cleanup() {
+                delete window[callbackName];
+                script.onerror = null;
+                if (script.parentNode) script.parentNode.removeChild(script);
+            }
+
+            window[callbackName] = function (offers) {
+                cleanup();
+                const raw = parseOffers(offers);
                 const selected = sortAndSliceOffers(raw);
                 state.offers = selected;
                 renderOffers(selected);
                 startLiveFeed(selected);
-            })
-            .catch(function () {
+                resolve();
+            };
+
+            script.onerror = function () {
+                cleanup();
                 state.offers = [];
                 renderLoadError("Could not load tasks. Please refresh and try again.");
                 startLiveFeed([]);
-            });
+                reject(new Error("Failed to load offers"));
+            };
+
+            document.head.appendChild(script);
+        }).catch(function () {
+            return undefined;
+        });
     }
 
     function formatAge(seconds) {
@@ -413,17 +438,31 @@
     }
 
     function checkLeadOnce() {
-        return fetch("/api/check-lead", { credentials: "same-origin" })
-            .then(function (response) {
-                if (!response.ok) return [];
-                return response.json();
-            })
-            .then(function (payload) {
-                return Array.isArray(payload) ? payload : [];
-            })
-            .catch(function () {
-                return [];
-            });
+        return new Promise(function (resolve) {
+            const callbackName = "__yzLeads_" + Date.now();
+            const script = document.createElement("script");
+            script.src = CHECK_URL + "?testing=0&callback=" + callbackName;
+
+            function cleanup() {
+                delete window[callbackName];
+                script.onerror = null;
+                if (script.parentNode) script.parentNode.removeChild(script);
+            }
+
+            window[callbackName] = function (leads) {
+                cleanup();
+                resolve(Array.isArray(leads) ? leads : []);
+            };
+
+            script.onerror = function () {
+                cleanup();
+                resolve([]);
+            };
+
+            document.head.appendChild(script);
+        }).catch(function () {
+            return [];
+        });
     }
 
     function startPolling() {
