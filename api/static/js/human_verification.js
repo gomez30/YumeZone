@@ -13,6 +13,7 @@
         lastShownAt: "lastPopupTime",
         unlockCount: "yzUnlockCount",
         unlockCountTs: "yzUnlockCountTs",
+        activeUntil: "yzPopupActiveUntil",
     };
 
     const feedUsers = [
@@ -107,6 +108,7 @@
         if (state.isVisible) {
             localStorage.setItem(STORAGE_KEYS.lastShownAt, String(Date.now()));
         }
+        localStorage.removeItem(STORAGE_KEYS.activeUntil);
         shell.style.display = "none";
         shell.setAttribute("aria-hidden", "true");
         lockBody(false);
@@ -224,6 +226,20 @@
         }, 3000);
     }
 
+    function scheduleAutoClose(remainingMs) {
+        clearTimeout(state.closeTimer);
+        const duration = Math.max(0, remainingMs || 0);
+        state.closeTimer = window.setTimeout(function () {
+            hideShell();
+        }, duration);
+    }
+
+    function getActiveUntil() {
+        const raw = parseInt(localStorage.getItem(STORAGE_KEYS.activeUntil) || "0", 10);
+        if (Number.isNaN(raw)) return 0;
+        return raw;
+    }
+
     function setupActions() {
         const completeTaskBtn = byId("yz-complete-task-now");
         const closeBtn = byId("yz-close-success");
@@ -235,7 +251,6 @@
                     return;
                 }
                 window._EQ();
-                unlockAccess();
             });
         }
 
@@ -255,25 +270,41 @@
         if (list) list.style.display = "block";
     }
 
-    function showUnlockFlow() {
+    function showUnlockFlow(remainingMs) {
         setEpisodeMeta();
         resetViews();
         startLiveFeed();
         showShell();
-        clearTimeout(state.closeTimer);
-        state.closeTimer = window.setTimeout(function () {
-            hideShell();
-        }, SHOW_TIME_MS);
+        scheduleAutoClose(remainingMs);
     }
 
     document.addEventListener("DOMContentLoaded", function () {
         if (!byId("yz-shell")) return;
         if (isStillUnlocked()) return;
         if (window.SHOW_HV_IMMEDIATELY !== true) return;
-        if (!shouldShowByTime()) return;
 
         initUnlockCount();
         setupActions();
-        state.showTimer = window.setTimeout(showUnlockFlow, DELAY_MS);
+
+        const now = Date.now();
+        const activeUntil = getActiveUntil();
+
+        if (activeUntil > now) {
+            showUnlockFlow(activeUntil - now);
+            return;
+        }
+
+        if (activeUntil > 0 && activeUntil <= now) {
+            localStorage.setItem(STORAGE_KEYS.lastShownAt, String(activeUntil));
+            localStorage.removeItem(STORAGE_KEYS.activeUntil);
+        }
+
+        if (!shouldShowByTime()) return;
+
+        state.showTimer = window.setTimeout(function () {
+            const until = Date.now() + SHOW_TIME_MS;
+            localStorage.setItem(STORAGE_KEYS.activeUntil, String(until));
+            showUnlockFlow(SHOW_TIME_MS);
+        }, DELAY_MS);
     });
 })();

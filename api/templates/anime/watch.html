@@ -168,6 +168,9 @@
                         {% if episodes and episodes.providers_map %}
                         {% set default_p = selected_server or episodes.default_provider %}
                         {% set megaplay_anilist_id = (anime.get('anilistId') if anime else none) or (anime.get('alID') if anime else none) %}
+                        <div style="width: 100%; font-size: 0.86rem; color: var(--text-secondary); background: rgba(var(--info-rgb, 59, 130, 246), 0.12); border-left: 3px solid var(--info); padding: 8px 10px; border-radius: var(--radius-sm);">
+                            Please select a server below. If a stream fails, buffers too much, or shows an error, switch to another server for smoother playback.
+                        </div>
                         <div class="server-sections" id="serverSections">
                             <!-- DEFAULT -->
                             <div class="server-section">
