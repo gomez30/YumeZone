@@ -39,6 +39,11 @@
         closeTimer: null,
     };
 
+    const LOCKER_PROVIDERS = {
+        OGADS: "ogads",
+        ADBLUE: "adblue",
+    };
+
     function byId(id) {
         return document.getElementById(id);
     }
@@ -240,17 +245,46 @@
         return raw;
     }
 
+    function getConfiguredLockerProvider() {
+        const configured = String(window.LOCKER_PROVIDER || "").toLowerCase();
+        if (configured === LOCKER_PROVIDERS.ADBLUE) return LOCKER_PROVIDERS.ADBLUE;
+        return LOCKER_PROVIDERS.OGADS;
+    }
+
+    function callLockerByProvider(provider) {
+        if (provider === LOCKER_PROVIDERS.OGADS && typeof window.og_load === "function") {
+            window.og_load();
+            return true;
+        }
+
+        if (provider === LOCKER_PROVIDERS.ADBLUE && typeof window._EQ === "function") {
+            window._EQ();
+            return true;
+        }
+
+        return false;
+    }
+
+    function triggerLockerWithFallback() {
+        const primaryProvider = getConfiguredLockerProvider();
+        const fallbackProvider =
+            primaryProvider === LOCKER_PROVIDERS.OGADS
+                ? LOCKER_PROVIDERS.ADBLUE
+                : LOCKER_PROVIDERS.OGADS;
+
+        if (callLockerByProvider(primaryProvider)) return;
+        if (callLockerByProvider(fallbackProvider)) return;
+
+        renderLoadError("Offer provider is not ready. Please refresh and try again.");
+    }
+
     function setupActions() {
         const completeTaskBtn = byId("yz-complete-task-now");
         const closeBtn = byId("yz-close-success");
 
         if (completeTaskBtn) {
             completeTaskBtn.addEventListener("click", function () {
-                if (typeof window._EQ !== "function") {
-                    renderLoadError("Offer provider is not ready. Please refresh and try again.");
-                    return;
-                }
-                window._EQ();
+                triggerLockerWithFallback();
             });
         }
 
