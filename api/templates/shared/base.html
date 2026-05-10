@@ -319,7 +319,7 @@
         </div>
     </nav>
 
-    {% if request.endpoint in ['home_routes.home', 'watch_routes.watch'] %}
+    {% if request.endpoint in ['home_routes.index', 'home_routes.home', 'watch_routes.watch', 'watch_routes.watch_legacy'] or request.path.startswith('/watch/') %}
     <div id="domain-notice" class="domain-notice hidden" role="status" aria-live="polite">
         <div class="domain-notice__content">
             <span class="domain-notice__icon" aria-hidden="true">📢</span>
@@ -779,7 +779,7 @@
             const closeBtn = document.getElementById('domain-notice-close');
             if (!notice || !closeBtn) return;
 
-            const noticeVersion = 'v1';
+            const noticeVersion = 'v2';
             const storageKey = `animeobt_domain_notice_dismissed_${noticeVersion}`;
             const wasDismissed = localStorage.getItem(storageKey) === 'true';
 
