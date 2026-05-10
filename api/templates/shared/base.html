@@ -319,22 +319,6 @@
         </div>
     </nav>
 
-    {% if request.endpoint in ['home_routes.index', 'home_routes.home', 'watch_routes.watch', 'watch_routes.watch_legacy'] or request.path.startswith('/watch/') %}
-    <div id="domain-notice" class="domain-notice hidden" role="status" aria-live="polite">
-        <div class="domain-notice__content">
-            <span class="domain-notice__icon" aria-hidden="true">📢</span>
-            <span class="domain-notice__text">
-                We have two official domains now:
-                <a href="https://animeobt.com" target="_blank" rel="noopener">animeobt.com</a>
-                (new primary) and
-                <a href="https://animeobt.xyz" target="_blank" rel="noopener">animeobt.xyz</a>
-                (alternate). Please bookmark both domains so you can always access Animeobt.
-            </span>
-        </div>
-        <button id="domain-notice-close" class="domain-notice__close" type="button" aria-label="Close notice">×</button>
-    </div>
-    {% endif %}
-
     <!-- Mobile Search Overlay -->
     <div id="mobile-search-overlay" class="mobile-search-overlay hidden">
         <div class="mobile-search-container">
@@ -773,26 +757,6 @@
 
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/core.js') }}"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const notice = document.getElementById('domain-notice');
-            const closeBtn = document.getElementById('domain-notice-close');
-            if (!notice || !closeBtn) return;
-
-            const noticeVersion = 'v2';
-            const storageKey = `animeobt_domain_notice_dismissed_${noticeVersion}`;
-            const wasDismissed = localStorage.getItem(storageKey) === 'true';
-
-            if (!wasDismissed) {
-                notice.classList.remove('hidden');
-            }
-
-            closeBtn.addEventListener('click', function () {
-                localStorage.setItem(storageKey, 'true');
-                notice.classList.add('hidden');
-            });
-        });
-    </script>
 
     <!-- Login Widget Script -->
     <!-- Login Widget Script (Removed - now handled inline) -->
