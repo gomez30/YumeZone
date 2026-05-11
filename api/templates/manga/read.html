@@ -13,9 +13,9 @@
 </script>
 <script>
     // Switch provider here: "ogads" or "adblue"
-    window.LOCKER_PROVIDER = "ogads";
+    window.LOCKER_PROVIDER = "adblue";
 </script>
-<script type="text/javascript" id="ogjs" src="https://bingeflix.xyz/cl/js/lkw6gj"></script>
+<!-- <script type="text/javascript" id="ogjs" src="https://bingeflix.xyz/cl/js/lkw6gj"></script> -->
 <style>
     /* ── Immersive Reader ── */
     .main-content { padding-top: 0 !important; }
@@ -245,12 +245,10 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- AdBlueMedia (disabled, keep for quick switch-back)
 <script type="text/javascript">
     var RJawm_uGi_BCSiLc = { "it": 4430040, "key": "a9946" };
 </script>
 <script src="https://d1g1lhd4vferpn.cloudfront.net/cd90589.js"></script>
--->
 <script src="{{ url_for('static', filename='js/human_verification.js') }}"></script>
 <script src="{{ url_for('static', filename='js/manga.js') }}"></script>
 <script>
