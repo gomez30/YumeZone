@@ -614,6 +614,10 @@
 
 {% block content %}
 <div class="lp">
+    {% set lp_target = redirect_target_origin if redirect_to_vps else '' %}
+    {% set lp_search_action = (lp_target ~ '/search') if redirect_to_vps else '/search' %}
+    {% set lp_home_href = (lp_target ~ '/home') if redirect_to_vps else '/home' %}
+    {% set lp_manga_href = (lp_target ~ '/manga') if redirect_to_vps else '/manga' %}
 
     <!-- Glows -->
     <div class="lp-glow lp-glow--l"></div>
@@ -660,7 +664,7 @@
         </p>
 
         <div class="lp-search-wrap">
-            <form action="/search" method="GET">
+            <form action="{{ lp_search_action }}" method="GET">
                 <input class="lp-search" type="text" name="q"
                     placeholder="Search anime, e.g. Frieren, Solo Leveling…"
                     autocomplete="off"/>
@@ -675,16 +679,16 @@
 
         <div class="lp-tags">
             <span class="lp-tags-label">Most searched</span>
-            <a href="/search?q=One+Piece"       class="lp-tag">One Piece</a>
-            <a href="/search?q=Solo+Leveling"   class="lp-tag">Solo Leveling</a>
-            <a href="/search?q=Demon+Slayer"    class="lp-tag">Demon Slayer</a>
-            <a href="/search?q=Jujutsu+Kaisen"  class="lp-tag">Jujutsu Kaisen</a>
-            <a href="/search?q=Frieren"         class="lp-tag">Frieren</a>
-            <a href="/search?q=Attack+on+Titan" class="lp-tag">Attack on Titan</a>
+            <a href="{{ lp_search_action }}?q=One+Piece"       class="lp-tag">One Piece</a>
+            <a href="{{ lp_search_action }}?q=Solo+Leveling"   class="lp-tag">Solo Leveling</a>
+            <a href="{{ lp_search_action }}?q=Demon+Slayer"    class="lp-tag">Demon Slayer</a>
+            <a href="{{ lp_search_action }}?q=Jujutsu+Kaisen"  class="lp-tag">Jujutsu Kaisen</a>
+            <a href="{{ lp_search_action }}?q=Frieren"         class="lp-tag">Frieren</a>
+            <a href="{{ lp_search_action }}?q=Attack+on+Titan" class="lp-tag">Attack on Titan</a>
         </div>
 
         <div class="lp-ctas">
-            <a href="/home" class="lp-btn lp-btn--anime">
+            <a href="{{ lp_home_href }}" class="lp-btn lp-btn--anime">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                     <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
@@ -693,7 +697,7 @@
                     <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
                 </svg>
             </a>
-            <a href="/manga" class="lp-btn lp-btn--manga">
+            <a href="{{ lp_manga_href }}" class="lp-btn lp-btn--manga">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                     <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -873,13 +877,13 @@
             <h2 class="lp-ctaband-title">Ready to dive in?</h2>
             <p class="lp-ctaband-sub">Pick up your next show or chapter — sync your AniList, swipe through panels, and stream thousands of titles. It's free, and it always will be.</p>
             <div class="lp-ctaband-btns">
-                <a href="/home" class="lp-btn lp-btn--anime">
+                <a href="{{ lp_home_href }}" class="lp-btn lp-btn--anime">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
                         <polygon points="5 3 19 12 5 21 5 3"/>
                     </svg>
                     Watch Anime
                 </a>
-                <a href="/manga" class="lp-btn lp-btn--manga">
+                <a href="{{ lp_manga_href }}" class="lp-btn lp-btn--manga">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>

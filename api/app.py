@@ -2,8 +2,11 @@ import os
 import re
 import logging
 import secrets
+import time
+from urllib.parse import urlsplit
+from urllib.request import Request, urlopen
 
-from flask import Flask, render_template, request, abort, jsonify, session
+from flask import Flask, render_template, request, abort, jsonify, session, redirect
 from dotenv import load_dotenv
 
 load_dotenv(override=False)
@@ -96,6 +99,96 @@ def create_app():
     app.register_blueprint(auth_bp,      url_prefix='/auth')
     app.register_blueprint(watchlist_bp, url_prefix='/watchlist')
     app.register_blueprint(api_bp,       url_prefix='/api')
+    health_cache = {
+        "checked_at": 0.0,
+        "is_healthy": True,
+    }
+
+    def _is_redirect_target_healthy():
+        if not app.config.get("REDIRECT_HEALTHCHECK_ENABLED", False):
+            return True
+
+        now = time.time()
+        ttl_seconds = int(app.config.get("REDIRECT_HEALTHCHECK_TTL_SECONDS", 60))
+        if now - health_cache["checked_at"] < ttl_seconds:
+            return bool(health_cache["is_healthy"])
+
+        target_origin = str(
+            app.config.get("REDIRECT_TARGET_ORIGIN", "https://animeobt.com")
+        ).rstrip("/")
+        health_path = str(app.config.get("REDIRECT_HEALTHCHECK_PATH", "/healthz") or "/healthz")
+        if not health_path.startswith("/"):
+            health_path = "/" + health_path
+        timeout_ms = int(app.config.get("REDIRECT_HEALTHCHECK_TIMEOUT_MS", 1200))
+        timeout_seconds = max(0.2, timeout_ms / 1000.0)
+        health_url = f"{target_origin}{health_path}"
+
+        is_healthy = False
+        try:
+            req = Request(health_url, method="GET")
+            with urlopen(req, timeout=timeout_seconds) as resp:
+                status_code = getattr(resp, "status", resp.getcode())
+                is_healthy = 200 <= int(status_code) < 400
+        except Exception as exc:
+            app.logger.warning("Redirect health check failed for %s: %s", health_url, exc)
+            is_healthy = False
+
+        health_cache["checked_at"] = now
+        health_cache["is_healthy"] = is_healthy
+        return is_healthy
+
+    @app.context_processor
+    def inject_redirect_config():
+        target_origin = str(
+            app.config.get("REDIRECT_TARGET_ORIGIN", "https://animeobt.com")
+        ).rstrip("/")
+        return {
+            "redirect_to_vps": bool(app.config.get("REDIRECT_TO_VPS", False)),
+            "redirect_target_origin": target_origin,
+        }
+
+    @app.before_request
+    def redirect_selected_routes_to_vps():
+        if not app.config.get("REDIRECT_TO_VPS", False):
+            return
+
+        path = request.path or "/"
+        normalized_path = path.rstrip("/") or "/"
+
+        excluded_exact_paths = {"/", "/home", "/healthz", "/favicon.ico", "/robots.txt", "/sitemap.xml"}
+        excluded_prefixes = ("/static/", "/api/", "/auth/", "/watchlist/")
+        redirect_prefixes = ("/watch/", "/manga", "/search", "/category/", "/anime/")
+
+        if normalized_path in excluded_exact_paths:
+            return
+        if path.startswith(excluded_prefixes):
+            return
+        if not path.startswith(redirect_prefixes):
+            return
+
+        target_origin = str(
+            app.config.get("REDIRECT_TARGET_ORIGIN", "https://animeobt.com")
+        ).rstrip("/")
+        target_host = (urlsplit(target_origin).netloc or "").lower()
+        request_host = (request.host or "").lower()
+        if target_host and request_host == target_host:
+            return
+
+        if not _is_redirect_target_healthy():
+            app.logger.warning("Skipping redirect for %s because target health check is failing", path)
+            return
+
+        query_string = request.query_string.decode("utf-8") if request.query_string else ""
+        destination = f"{target_origin}{path}"
+        if query_string:
+            destination = f"{destination}?{query_string}"
+
+        app.logger.info("Redirecting %s -> %s", request.url, destination)
+        return redirect(destination, code=307)
+
+    @app.route("/healthz", methods=["GET"])
+    def healthz():
+        return jsonify(ok=True, service="yumezone"), 200
 
     @app.before_request
     def check_urgent_announcement():

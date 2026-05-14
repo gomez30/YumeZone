@@ -21,6 +21,18 @@ def _env_country_codes(name: str, default_csv: str) -> set[str]:
     values = [part.strip().upper() for part in raw_value.split(",")]
     return {code for code in values if len(code) == 2 and code.isalpha()}
 
+
+def _env_int(name: str, default: int, minimum: int | None = None) -> int:
+    """Parse integer env values with fallback and optional floor."""
+    raw = os.getenv(name)
+    try:
+        value = int(raw) if raw is not None else int(default)
+    except (TypeError, ValueError):
+        value = int(default)
+    if minimum is not None and value < minimum:
+        return minimum
+    return value
+
 class Config:
     """Base configuration class"""
     # Prefer FLASK_KEY for backward compatibility, then SECRET_KEY.
@@ -52,6 +64,16 @@ class Config:
 
     # Application settings
     DEBUG = os.getenv("FLASK_ENV") == "development"
+    REDIRECT_TO_VPS = _env_bool("REDIRECT_TO_VPS", False)
+    REDIRECT_TARGET_ORIGIN = (
+        (os.getenv("REDIRECT_TARGET_ORIGIN") or "https://animeobt.com").strip().rstrip("/")
+    )
+    REDIRECT_HEALTHCHECK_ENABLED = _env_bool("REDIRECT_HEALTHCHECK_ENABLED", False)
+    REDIRECT_HEALTHCHECK_PATH = (
+        "/" + (os.getenv("REDIRECT_HEALTHCHECK_PATH", "/healthz").strip().lstrip("/"))
+    )
+    REDIRECT_HEALTHCHECK_TTL_SECONDS = _env_int("REDIRECT_HEALTHCHECK_TTL_SECONDS", 60, minimum=5)
+    REDIRECT_HEALTHCHECK_TIMEOUT_MS = _env_int("REDIRECT_HEALTHCHECK_TIMEOUT_MS", 1200, minimum=200)
     IPGEOLOCATION_API_KEY = os.getenv("IPGEOLOCATION_API_KEY", "").strip()
     GEO_DEFAULT_INTERNAL_COUNTRIES = _env_country_codes(
         "GEO_DEFAULT_INTERNAL_COUNTRIES", "US,GB,CA,AU"
@@ -116,13 +138,17 @@ class Config:
             logger.warning("Missing environment variables: %s", ", ".join(missing))
 
         logger.info(
-            "Feature flags - auth=%s watchlist=%s turnstile=%s email_reset=%s anilist=%s mal=%s",
+            "Feature flags - auth=%s watchlist=%s turnstile=%s email_reset=%s anilist=%s mal=%s redirect_to_vps=%s redirect_target_origin=%s redirect_healthcheck_enabled=%s redirect_healthcheck_path=%s",
             cls.ENABLE_AUTH,
             cls.ENABLE_WATCHLIST,
             cls.ENABLE_TURNSTILE,
             cls.ENABLE_EMAIL_RESET,
             cls.ENABLE_ANILIST,
             cls.ENABLE_MAL,
+            cls.REDIRECT_TO_VPS,
+            cls.REDIRECT_TARGET_ORIGIN,
+            cls.REDIRECT_HEALTHCHECK_ENABLED,
+            cls.REDIRECT_HEALTHCHECK_PATH,
         )
 
 

@@ -94,6 +94,20 @@ Ready to run YumeZone locally? Follow these steps:
     ENABLE_MAL="false"
     ```
 
+    **Optional traffic offload switch (Vercel -> VPS):**
+    ```env
+    REDIRECT_TO_VPS="false"
+    REDIRECT_TARGET_ORIGIN="https://animeobt.com"
+    REDIRECT_HEALTHCHECK_ENABLED="false"
+    REDIRECT_HEALTHCHECK_PATH="/healthz"
+    REDIRECT_HEALTHCHECK_TTL_SECONDS="60"
+    REDIRECT_HEALTHCHECK_TIMEOUT_MS="1200"
+    ```
+    - Keep `REDIRECT_TO_VPS=false` by default (no redirect).
+    - Set `REDIRECT_TO_VPS=true` to offload selected content routes (`/watch`, `/manga`, `/search`, `/category`, `/anime`) to `REDIRECT_TARGET_ORIGIN` using HTTP 307.
+    - Landing route `/` remains local for discovery/SEO.
+    - If `REDIRECT_HEALTHCHECK_ENABLED=true`, redirects are fail-open: the app checks `REDIRECT_TARGET_ORIGIN + REDIRECT_HEALTHCHECK_PATH` on a cached interval and skips redirects while target health is failing.
+
     **Optional integrations (only needed if you enable those features):**
     - MongoDB: `MONGODB_URI`, `db`, `users_collection`, `watchlist_collection`, `comments_collection`, `episode_reactions_collection`
     - Turnstile: `CLOUDFLARE_SECRET`, `CF_SITE_KEY`

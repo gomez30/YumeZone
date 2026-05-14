@@ -207,7 +207,7 @@
             <!-- Search (Centered) -->
             <div class="search-container">
                 {% set is_manga_page = '/manga' in request.path %}
-                <form action="{% if is_manga_page %}/manga/search{% else %}{{ url_for('search_routes.search') }}{% endif %}" method="GET" class="search-input-wrapper"
+                <form action="{% if redirect_to_vps %}{{ redirect_target_origin }}{% if is_manga_page %}/manga/search{% else %}{{ url_for('search_routes.search') }}{% endif %}{% else %}{% if is_manga_page %}/manga/search{% else %}{{ url_for('search_routes.search') }}{% endif %}{% endif %}" method="GET" class="search-input-wrapper"
                     id="search-form">
                     {% if is_manga_page %}<input type="hidden" name="source" value="{{ current_source|default('atsumaru') }}">{% endif %}
                     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -323,7 +323,7 @@
     <div id="mobile-search-overlay" class="mobile-search-overlay hidden">
         <div class="mobile-search-container">
             <div class="mobile-search-header">
-                <form action="{% if is_manga_page %}/manga/search{% else %}{{ url_for('search_routes.search') }}{% endif %}" method="GET" class="mobile-search-form"
+                <form action="{% if redirect_to_vps %}{{ redirect_target_origin }}{% if is_manga_page %}/manga/search{% else %}{{ url_for('search_routes.search') }}{% endif %}{% else %}{% if is_manga_page %}/manga/search{% else %}{{ url_for('search_routes.search') }}{% endif %}{% endif %}" method="GET" class="mobile-search-form"
                     id="mobile-search-form">
                     {% if is_manga_page %}<input type="hidden" name="source" value="{{ current_source|default('atsumaru') }}">{% endif %}
                     <svg class="mobile-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
